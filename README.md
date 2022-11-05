@@ -1,2 +1,2 @@
 # tvheadend-patched
-tvheadend-patched with fegol patches
+tvheadend-patched add-on for CoreELEC with fegol patches
