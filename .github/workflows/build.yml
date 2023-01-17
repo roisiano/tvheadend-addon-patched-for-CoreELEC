@@ -49,3 +49,13 @@ jobs:
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
+      - name: Generate release tag
+        run: echo "release_tag=$(echo ${{ matrix.commits }}-$(git log 2>/dev/null | sed -n 1p | cut -d ' ' -f2 | cut -c1-7) | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
+      - name: Automatic Releases
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: ${{ env.release_tag }}
+          prerelease: false
+          title: "GitHub Build"
+          files: ${{ github.workspace }}/CoreELEC/target/*.zip
