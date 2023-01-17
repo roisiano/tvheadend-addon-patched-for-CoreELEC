@@ -1,1 +1,69 @@
-probando
+name: GitHub Automatic Build
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        commits:
+          - "coreelec-9.2"
+          - "coreelec-19"
+          - "coreelec-20"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+      - name: Download the CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC
+      - name: CoreELEC release tags checkout
+        run: |
+          cd CoreELEC
+          git checkout ${{ matrix.commits }}
+      - name: Patches adding ...
+        run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
+          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          if [ "${{ matrix.commits }}" != "coreelec-9.2" ]; then
+             cp ${{github.workspace}}/.github/patches/tvheadend43.patch ${{github.workspace}}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          fi
+      - name: downloading pngquant (bug ipv6) ...
+        run: |
+          mkdir -p ${{github.workspace}}/CoreELEC/sources/pngquant
+          if [ "${{ matrix.commits }}" == "coreelec-9.2" ]; then
+             version=2.12.0
+          else
+             version=2.13.1
+          fi
+          wget -c -P ${{ github.workspace }}/CoreELEC/sources/pngquant/ https://pngquant.org/pngquant-${version}-src.tar.gz --timeout=60
+          sha256sum ${{ github.workspace }}/CoreELEC/sources/pngquant/pngquant-${version}-src.tar.gz > ${{ github.workspace }}/CoreELEC/sources/pngquant/pngquant-${version}-src.tar.gz.sha256
+      - name: Building addons
+        run: |
+          if [ "${{ matrix.commits }}" == "coreelec-9.2" ]; then
+             cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic scripts/create_addon tvheadend42 tvheadend43
+          else
+             cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
+          fi
+      - name: Compress addons
+        run: |
+          cd ${{ github.workspace }}/CoreELEC/target
+          zip -rFS9 addons.zip addons
+      - name: Upload target
+        uses: actions/upload-artifact@v3
+        with:
+          name: target
+          path: ${{ github.workspace }}/CoreELEC/target/*.zip
+      - name: Generate release tag
+        run: echo "release_tag=$(echo ${{ matrix.commits }}-$(git log 2>/dev/null | sed -n 1p | cut -d ' ' -f2 | cut -c1-7) | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
+      - name: Automatic Releases
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: ${{ env.release_tag }}
+          prerelease: false
+          title: "GitHub Build"
+          files: ${{ github.workspace }}/CoreELEC/target/*.zip
