@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         tag:
-#          - "9.2.8"
+          - "9.2.8"
           - "19.5-Matrix"
           - "20.0-Nexus_rc2"
     steps:
