@@ -24,6 +24,8 @@ jobs:
           git checkout ${{ matrix.commits }}
       - name: Patches adding ...
         run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/devel/m4/patches
+          cp ${{ github.workspace }}/.github/patches/m4.patch ${{ github.workspace }}/CoreELEC/packages/devel/m4/patches/m4-100-LS.patch
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
           cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
