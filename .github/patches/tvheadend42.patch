@@ -11,7 +11,7 @@ index 7b3eeb921..00599cc40 100644
  
  typedef void (*descrambler_section_callback_t)
 diff --git a/src/descrambler/descrambler.c b/src/descrambler/descrambler.c
-index ae57ded53..264993251 100644
+index ae57ded53..afb3cec60 100644
 --- a/src/descrambler/descrambler.c
 +++ b/src/descrambler/descrambler.c
 @@ -727,9 +727,9 @@ descrambler_descramble ( service_t *t,
@@ -26,14 +26,31 @@ index ae57ded53..264993251 100644
        dr->dr_key_changed = 0;
      }
  
-@@ -937,6 +937,7 @@ descrambler_table_callback
+@@ -874,6 +874,9 @@ descrambler_table_callback
+   descrambler_section_t *ds;
+   descrambler_ecmsec_t *des;
+   th_descrambler_runtime_t *dr;
++  elementary_stream_t *st;
++  caid_t *ca;
++
+   LIST_HEAD(,descrambler_ecmsec) sections;
+   int emm = (mt->mt_flags & MT_FAST) == 0;
+ 
+@@ -936,6 +939,14 @@ descrambler_table_callback
+               dr->dr_ecm_start[ptr[0] & 1] = mclk();
                if (dr->dr_quick_ecm)
                  dr->dr_key_valid &= ~(1 << ((ptr[0] & 1) + 6)); /* 0x40 = even, 0x80 = odd */
++              TAILQ_FOREACH(st, &mt->mt_service->s_filt_components, es_filt_link) {
++                if (st->es_pid != mt->mt_pid) continue;
++                LIST_FOREACH(ca, &st->es_caids, link) {
++                  if (ca->use == 0) continue;
++                  dr->dr_ecm = (ca->caid >> 8 == 0x09 && (ptr[2] - ptr[4]) == 4) ? ptr[21] : 0;
++                  tvhtrace(LS_DESCRAMBLER, "key ecm=%X (caid=%04X)", dr->dr_ecm, ca->caid);
++                }
++              }
              }
-+            dr->dr_ecm = (ptr[2] - ptr[4]) == 4 ? ptr[0x15] : 0;
              tvhtrace(LS_DESCRAMBLER, "ECM message %02x (section %d, len %d, pid %d) for service \"%s\"",
                       ptr[0], des->number, len, mt->mt_pid, t->s_dvb_svcname);
-           }
 diff --git a/src/descrambler/ffdecsa/FFdecsa.c b/src/descrambler/ffdecsa/FFdecsa.c
 index ce0c28a1f..f62882295 100644
 --- a/src/descrambler/ffdecsa/FFdecsa.c
