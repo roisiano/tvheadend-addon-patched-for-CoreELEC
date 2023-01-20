@@ -67,7 +67,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
       - name: CoreELEC release tags checkout
@@ -83,6 +83,9 @@ jobs:
       - name: Building addons
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
+          if [ ${{ matrix.project }} == Amlogic ]; then
+            find "target" -name "*.zip" -exec rename -v 's/zip/zip-without_ng/' *.zip {} \;
+          fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -90,7 +93,6 @@ jobs:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
-
 
   release:
     needs: [ build, build_old ]
@@ -111,7 +113,7 @@ jobs:
              echo "release_tag=${GITHUB_REF#refs/heads/}-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
              echo "prerelease=false" >> $GITHUB_ENV
           else
-             echo "release_tag=$(echo ${{ github.event.inputs.tag }} | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
+             echo "release_tag=$(echo "${{ github.event.inputs.tag }}" | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
              if [ ${{ github.event.inputs.prerelease }} == 'true' ]; then
                 echo "prerelease=true" >> $GITHUB_ENV
              else
@@ -124,4 +126,4 @@ jobs:
           name: "GitHub Build"
           tag_name: ${{ env.release_tag }}
           prerelease: ${{ env.prerelease }}
-          files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip
+          files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
