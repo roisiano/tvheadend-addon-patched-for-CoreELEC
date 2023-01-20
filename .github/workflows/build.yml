@@ -14,15 +14,15 @@ on:
         options:
         - true
         - false
+
 jobs:
   build:
-    name: ${{ matrix.tag }}
+    name: ${{ matrix.tag }} (Amlogic-ng)
     runs-on: ubuntu-20.04
     continue-on-error: true
     strategy:
       matrix:
         tag:
-          - "9.2.8"
           - "19.5-Matrix"
           - "20.0-Nexus"
     steps:
@@ -42,16 +42,10 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-          if [ "${{ matrix.tag }}" != "9.2.8" ]; then
-             cp ${{github.workspace}}/.github/patches/tvheadend43.patch ${{github.workspace}}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-          fi
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
         run: |
-          if [ "${{ matrix.tag }}" == "9.2.8" ]; then
-             cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic scripts/create_addon tvheadend42 tvheadend43
-          else
-             cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
-          fi
+          cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -59,15 +53,54 @@ jobs:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
+
+  build_old:
+    name: 9.2.8
+    runs-on: ubuntu-20.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        project:
+          - "Amlogic"
+          - "Amlogic-ng"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+      - name: Download the CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC
+      - name: CoreELEC release tags checkout
+        run: |
+          cd CoreELEC
+          git checkout 9.2.8
+      - name: Patches adding ...
+        run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
+          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+      - name: Building addons
+        run: |
+          cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
+      - name: Upload target
+#        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
+        uses: actions/upload-artifact@v3
+        with:
+          name: target
+          path: ${{ github.workspace }}/CoreELEC/target/
+          if-no-files-found: error
+
+
   release:
-    needs: [ build ]
+    needs: [ build, build_old ]
     strategy:
       fail-fast: false
     name: Releases
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
     runs-on: ubuntu-latest
     steps:
-      - name: Download toolchains
+      - name: Download target
         uses: actions/download-artifact@v3
         with:
           name: target
