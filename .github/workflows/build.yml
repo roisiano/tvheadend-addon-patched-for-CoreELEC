@@ -132,7 +132,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [ build, build-ne, build_old ]
+    needs: [ build, build_ne, build_old ]
     strategy:
       fail-fast: false
     name: Releases
