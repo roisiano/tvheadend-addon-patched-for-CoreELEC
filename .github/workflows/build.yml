@@ -37,8 +37,6 @@ jobs:
         run: |
           cd CoreELEC
           git checkout ${{ matrix.tag }}
-      - name: forcing ipv4 due to download errors...
-        run: sed 's\WGET_CMD="wget \WGET_CMD="wget --inet4-only \' -i ${{ github.workspace }}/CoreELEC/scripts/get_archive
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
@@ -49,6 +47,43 @@ jobs:
       - name: Building addons
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
+      - name: Upload target
+#        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
+        uses: actions/upload-artifact@v3
+        with:
+          name: target
+          path: ${{ github.workspace }}/CoreELEC/target/
+          if-no-files-found: error
+
+  build_ne_aarch64:
+    name: ${{ matrix.tag }} (Amlogic-ne)
+    runs-on: ubuntu-20.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        tag:
+          - "21.0-Omega_alpha2"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+      - name: Download the CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC
+      - name: CoreELEC release tags checkout
+        run: |
+          cd CoreELEC
+          git checkout ${{ matrix.tag }}
+      - name: Patches adding ...
+        run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
+          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+      - name: Building addons
+        run: |
+          cd ${{ github.workspace }}/CoreELEC && ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-ne scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -77,8 +112,6 @@ jobs:
         run: |
           cd CoreELEC
           git checkout ${{ matrix.tag }}
-      - name: forcing ipv4 due to download errors...
-        run: sed 's\WGET_CMD="wget \WGET_CMD="wget --inet4-only \' -i ${{ github.workspace }}/CoreELEC/scripts/get_archive
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
@@ -138,7 +171,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [ build, build_ne, build_old ]
+    needs: [ build, build_ne_aarch64, build_ne, build_old ]
     strategy:
       fail-fast: false
     name: Releases
