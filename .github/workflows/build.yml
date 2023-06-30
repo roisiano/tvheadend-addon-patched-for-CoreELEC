@@ -37,6 +37,8 @@ jobs:
         run: |
           cd CoreELEC
           git checkout ${{ matrix.tag }}
+      - name: forcing ipv4 due to download errors...
+        run: sed 's\WGET_CMD="wget \WGET_CMD="wget --inet4-only \' -i ${{ github.workspace }}/CoreELEC/scripts/get_archive
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
@@ -75,6 +77,8 @@ jobs:
         run: |
           cd CoreELEC
           git checkout ${{ matrix.tag }}
+      - name: forcing ipv4 due to download errors...
+        run: sed 's\WGET_CMD="wget \WGET_CMD="wget --inet4-only \' -i ${{ github.workspace }}/CoreELEC/scripts/get_archive
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
