@@ -18,7 +18,7 @@ on:
 jobs:
   build:
     name: ${{ matrix.tag }} (Amlogic-ng)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     continue-on-error: true
     strategy:
       matrix:
@@ -57,7 +57,7 @@ jobs:
 
   build_ne:
     name: ${{ matrix.tag }} (Amlogic-ne)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     continue-on-error: true
     strategy:
       matrix:
@@ -95,7 +95,7 @@ jobs:
 
   build_old:
     name: 9.2.8
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     continue-on-error: true
     strategy:
       matrix:
