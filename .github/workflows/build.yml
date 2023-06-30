@@ -25,7 +25,7 @@ jobs:
         tag:
           - "19.5-Matrix"
           - "20.1-Nexus"
-          - "21.0-Omega_alpha1"
+          - "21.0-Omega_alpha2"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,7 +63,7 @@ jobs:
       matrix:
         tag:
           - "20.1-Nexus"
-          - "21.0-Omega_alpha1"
+          - "21.0-Omega_alpha2"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
