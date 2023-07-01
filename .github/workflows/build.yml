@@ -44,8 +44,8 @@ jobs:
           git checkout 21.0-Omega_alpha2
       - name: adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ github.workspace }}/CoreELEC/sources
           fi
       - name: Patches adding ...
         run: |
@@ -87,8 +87,8 @@ jobs:
           git checkout 20.2-Nexus
       - name: adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ github.workspace }}/CoreELEC/sources
           fi
       - name: Patches adding ...
         run: |
@@ -125,8 +125,8 @@ jobs:
           git checkout 19.5-Matrix
       - name: adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ github.workspace }}/CoreELEC/sources
           fi
       - name: Patches adding ...
         run: |
@@ -146,8 +146,8 @@ jobs:
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
 
-  leila:
-    name: Leila-${{ matrix.project }}
+  leia:
+    name: Leia-${{ matrix.project }}
     runs-on: ubuntu-20.04
     continue-on-error: true
     strategy:
@@ -187,7 +187,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [ omega, nexus, matrix, leila ]
+    needs: [ omega, nexus, matrix, leia ]
     strategy:
       fail-fast: false
     name: Releases
