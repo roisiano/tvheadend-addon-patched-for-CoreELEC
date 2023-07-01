@@ -24,8 +24,6 @@ jobs:
       matrix:
         include:
         - device: "Amlogic-ne"
-          arch: arm
-        - device: "Amlogic-ne"
           arch: aarch64
         - device: "Amlogic-ng-dv"
           arch: arm
