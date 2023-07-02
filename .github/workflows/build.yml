@@ -56,7 +56,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
           if [ ${{ matrix.device }} == Amlogic-ne ] || [ ${{ matrix.device }} == Amlogic-ng-dv ]; then
-            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.device }}/' *.zip {} \;
+            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
           fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
@@ -102,7 +102,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
           if [ ${{ matrix.device }} == Amlogic-ne ]; then
-            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.device }}/' *.zip {} \;
+            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
           fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
@@ -180,7 +180,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
           if [ ${{ matrix.project }} == Amlogic ]; then
-            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.project }}/' *.zip {} \;
+            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.project }}/" {} \;
           fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
@@ -223,4 +223,5 @@ jobs:
           tag_name: ${{ env.release_tag }}
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
+          
           
