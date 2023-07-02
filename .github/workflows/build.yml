@@ -55,6 +55,9 @@ jobs:
       - name: Building addons
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
+          if [ ${{ matrix.device }} == Amlogic-ne ] || [ ${{ matrix.device }} == Amlogic-ng-dv ]; then
+            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.device }}/' *.zip {} \;
+          fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -98,6 +101,9 @@ jobs:
       - name: Building addons
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
+          if [ ${{ matrix.device }} == Amlogic-ne ]; then
+            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.device }}/' *.zip {} \;
+          fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -174,7 +180,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
           if [ ${{ matrix.project }} == Amlogic ]; then
-            find "target" -name "*.zip" -exec rename -v 's/zip/zip-without_ng/' *.zip {} \;
+            find "target" -name "*.zip" -exec rename -v 's/zip/zip-${{ matrix.project }}/' *.zip {} \;
           fi
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
