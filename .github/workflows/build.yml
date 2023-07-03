@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
       - name: CoreELEC release tags checkout
@@ -79,7 +79,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
       - name: CoreELEC release tags checkout
@@ -120,7 +120,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+        run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
       - name: CoreELEC release tags checkout
@@ -224,4 +224,4 @@ jobs:
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
           
-          
+        
