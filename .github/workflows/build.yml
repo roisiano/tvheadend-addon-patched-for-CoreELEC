@@ -53,11 +53,10 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
-        run: |
-          cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
-          if [ ${{ matrix.device }} == Amlogic-ne ] || [ ${{ matrix.device }} == Amlogic-ng-dv ]; then
-            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
-          fi
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
+      - name: Rename zip files for releases ...
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
+        run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -99,11 +98,10 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
-        run: |
-          cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
-          if [ ${{ matrix.device }} == Amlogic-ne ]; then
-            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
-          fi
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
+      - name: Rename zip files for releases ...
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
+        run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -140,8 +138,7 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
-        run: |
-          cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -177,11 +174,10 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
-        run: |
-          cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
-          if [ ${{ matrix.project }} == Amlogic ]; then
-            find "target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.project }}/" {} \;
-          fi
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=${{ matrix.project }} scripts/create_addon tvheadend42 tvheadend43
+      - name: Rename zip files for releases ...
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
+        run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.project }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
         uses: actions/upload-artifact@v3
@@ -195,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
     name: Releases
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Download target
@@ -223,5 +219,3 @@ jobs:
           tag_name: ${{ env.release_tag }}
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
-          
-        
