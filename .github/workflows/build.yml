@@ -87,7 +87,7 @@ jobs:
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
-          git checkout 20.3-Nexus
+          git checkout 20.4-Nexus
       - name: adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
