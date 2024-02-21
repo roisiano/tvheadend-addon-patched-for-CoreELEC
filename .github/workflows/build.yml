@@ -1,5 +1,4 @@
 name: GitHub Automatic Build
-
 on:
   push:
   workflow_dispatch:
@@ -32,11 +31,7 @@ jobs:
           arch: arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.x
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install rdfind gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
@@ -63,7 +58,7 @@ jobs:
         run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -84,11 +79,7 @@ jobs:
           arch: arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.x
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
@@ -115,7 +106,7 @@ jobs:
         run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.device }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -127,11 +118,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.x
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
@@ -156,7 +143,7 @@ jobs:
         run: cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -173,11 +160,7 @@ jobs:
           - "Amlogic-ng"
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.x
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename
       - name: Download the CoreELEC
@@ -199,7 +182,7 @@ jobs:
         run: find "${{ github.workspace }}/CoreELEC/target" -name "*.zip" -exec rename -v "s/zip/zip-${{ matrix.project }}/" {} \;
       - name: Upload target
 #        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
