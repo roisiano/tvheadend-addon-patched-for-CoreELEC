@@ -63,12 +63,12 @@ jobs:
         id: upload-artifact
         continue-on-error: true
         with:
-          name: target
+          name: Omega-${{ matrix.device }}-${{ matrix.arch }}-target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
 
   nexus:
-    name: Nexus-${{ matrix.device }}
+    name: Nexus-${{ matrix.device }}-${{ matrix.arch }}
     runs-on: ubuntu-20.04
     continue-on-error: true
     strategy:
@@ -113,7 +113,7 @@ jobs:
         id: upload-artifact
         continue-on-error: true
         with:
-          name: target
+          name: Nexus-${{ matrix.device }}-${{ matrix.arch }}-target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
 
@@ -146,8 +146,7 @@ jobs:
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
           cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/projects/Amlogic-ce/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
         run: cd ${{ github.workspace }}/CoreELEC && ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
@@ -155,7 +154,7 @@ jobs:
         id: upload-artifact
         continue-on-error: true
         with:
-          name: target
+          name: Matrix-Amlogic-ng-target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
 
@@ -196,7 +195,7 @@ jobs:
         id: upload-artifact
         continue-on-error: true
         with:
-          name: target
+          name: Leia-${{ matrix.project }}-target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
 
@@ -234,16 +233,3 @@ jobs:
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
 
-      - name: Handle artifact name conflict
-        if: steps.upload-artifact.outcome == 'failure'
-        run: |
-          echo "Artifact upload failed due to conflict. Changing artifact name."
-          # Genera un nombre de artefacto único usando la fecha y hora actual
-          artifact_name="target_$(date +%Y%m%d%H%M%S)"
-          # Vuelve a cargar el artefacto con el nuevo nombre
-          mv "${{ github.workspace }}/CoreELEC/target/" "${{ github.workspace }}/CoreELEC/$artifact_name"
-          echo "::set-output name=artifact_name::$artifact_name"
-          # Carga el artefacto nuevamente con el nuevo nombre
-          echo "Uploading artifact with new name: $artifact_name"
-          mv "${{ github.workspace }}/CoreELEC/$artifact_name" "${{ github.workspace }}/CoreELEC/target/"
-          echo "Artifact successfully uploaded with name: $artifact_name"
