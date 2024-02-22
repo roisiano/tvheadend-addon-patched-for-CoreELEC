@@ -61,6 +61,7 @@ jobs:
       - name: Upload target
         uses: actions/upload-artifact@v4
         id: upload-artifact
+        continue-on-error: true
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -110,6 +111,7 @@ jobs:
       - name: Upload target
         uses: actions/upload-artifact@v4
         id: upload-artifact
+        continue-on-error: true
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -151,6 +153,7 @@ jobs:
       - name: Upload target
         uses: actions/upload-artifact@v4
         id: upload-artifact
+        continue-on-error: true
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -191,6 +194,7 @@ jobs:
       - name: Upload target
         uses: actions/upload-artifact@v4
         id: upload-artifact
+        continue-on-error: true
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/
@@ -230,3 +234,16 @@ jobs:
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
 
+      - name: Handle artifact name conflict
+        if: steps.upload-artifact.outcome == 'failure'
+        run: |
+          echo "Artifact upload failed due to conflict. Changing artifact name."
+          # Genera un nombre de artefacto único usando la fecha y hora actual
+          artifact_name="target_$(date +%Y%m%d%H%M%S)"
+          # Vuelve a cargar el artefacto con el nuevo nombre
+          mv "${{ github.workspace }}/CoreELEC/target/" "${{ github.workspace }}/CoreELEC/$artifact_name"
+          echo "::set-output name=artifact_name::$artifact_name"
+          # Carga el artefacto nuevamente con el nuevo nombre
+          echo "Uploading artifact with new name: $artifact_name"
+          mv "${{ github.workspace }}/CoreELEC/$artifact_name" "${{ github.workspace }}/CoreELEC/target/"
+          echo "Artifact successfully uploaded with name: $artifact_name"
