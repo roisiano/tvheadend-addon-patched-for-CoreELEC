@@ -207,44 +207,28 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
     runs-on: ubuntu-latest
     steps:
-      - name: Download Omega artifacts
+      - name: Download target
         uses: actions/download-artifact@v4
         with:
-          name: Omega-*
-          path: ${{ github.workspace }}/omega
-      - name: Download Nexus artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Nexus-*
-          path: ${{ github.workspace }}/nexus
-      - name: Download Matrix artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Matrix-*
-          path: ${{ github.workspace }}/matrix
-      - name: Download Leia artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Leia-*
-          path: ${{ github.workspace }}/leia
-      - name: Create release artifact
+          name: target
+          path: ${{ github.workspace }}/target
+      - name: Generate release tag
         run: |
-          mkdir -p ${{ github.workspace }}/release
-          cp -R ${{ github.workspace }}/omega/target/* ${{ github.workspace }}/release
-          cp -R ${{ github.workspace }}/nexus/target/* ${{ github.workspace }}/release
-          cp -R ${{ github.workspace }}/matrix/target/* ${{ github.workspace }}/release
-          cp -R ${{ github.workspace }}/leia/target/* ${{ github.workspace }}/release
-          cd ${{ github.workspace }}/release
-          today=$(date +%Y-%m-%d)
-          zip -r tvheadend.patched.addon-${today}.zip .
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: tvheadend.patched.addon-${today}
-          path: ${{ github.workspace }}/release
-      - name: Create GitHub release
+          if [ ${{ github.event_name }} == 'push' ]; then
+             echo "release_tag=${GITHUB_REF#refs/heads/}-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+             echo "prerelease=false" >> $GITHUB_ENV
+          else
+             echo "release_tag=$(echo "${{ github.event.inputs.tag }}" | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
+             if [ ${{ github.event.inputs.prerelease }} == 'true' ]; then
+                echo "prerelease=true" >> $GITHUB_ENV
+             else
+                echo "prerelease=false" >> $GITHUB_ENV
+             fi
+          fi
+      - name: Releases
         uses: softprops/action-gh-release@v1
         with:
-          files: tvheadend.patched.addon-${today}.zip
-          tag_name: tvheadend.patched.addon-${today}
-          name: tvheadend.patched.addon-${today}
+          name: "GitHub Build"
+          tag_name: ${{ env.release_tag }}
+          prerelease: ${{ env.prerelease }}
+          files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
