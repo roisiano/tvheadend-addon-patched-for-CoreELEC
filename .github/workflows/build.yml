@@ -94,7 +94,7 @@ jobs:
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
-          git checkout 20.4-Nexus
+          git checkout 20.5-Nexus
       - name: adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
@@ -232,3 +232,9 @@ jobs:
           tag_name: ${{ env.release_tag }}
           prerelease: ${{ env.prerelease }}
           files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
+
+      - name: Upload combined target
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-target
+          path: ${{ github.workspace }}/target
