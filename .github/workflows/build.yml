@@ -26,8 +26,8 @@ jobs:
         include:
           - device: "Amlogic-ne"
             arch: aarch64
-          - device: "Amlogic-ng-dv"
-            arch: arm
+#          - device: "Amlogic-ng-dv"
+#            arch: arm
           - device: "Amlogic-ng"
             arch: arm
     steps:
@@ -238,3 +238,4 @@ jobs:
         with:
           name: combined-target
           path: ${{ github.workspace }}/target
+          
