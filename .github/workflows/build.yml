@@ -40,7 +40,7 @@ jobs:
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
-          git checkout 21.1.1-Omega
+          git checkout coreelec-21
       - name: adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
