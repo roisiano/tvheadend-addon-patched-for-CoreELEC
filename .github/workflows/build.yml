@@ -19,7 +19,7 @@ on:
 jobs:
   omega:
     name: Omega-${{ matrix.device }}-${{ matrix.arch }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -44,7 +44,7 @@ jobs:
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
-          git checkout 21.1.1-Omega
+          git checkout 21.2-Omega
       - name: adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
@@ -69,7 +69,7 @@ jobs:
 
   nexus:
     name: Nexus-${{ matrix.device }}-${{ matrix.arch }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -119,7 +119,7 @@ jobs:
 
   matrix:
     name: Matrix-Amlogic-ng
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - name: Checkout
@@ -160,7 +160,7 @@ jobs:
 
   leia:
     name: Leia-${{ matrix.project }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
