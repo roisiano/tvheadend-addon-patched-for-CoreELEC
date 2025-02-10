@@ -19,7 +19,7 @@ on:
 jobs:
   omega:
     name: Omega-${{ matrix.device }}-${{ matrix.arch }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install rdfind gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename jq
       - name: Download the CoreELEC
-        run: git clone https://github.com/CoreELEC/CoreELEC
+        run: git clone https://github.com/zainkamal95/CoreELEC
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
