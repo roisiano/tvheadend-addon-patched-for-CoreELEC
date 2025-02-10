@@ -50,10 +50,9 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
           cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
-        run: cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
       - name: Upload target
         uses: actions/upload-artifact@v4
         id: upload-artifact
