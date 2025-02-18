@@ -34,7 +34,15 @@ jobs:
         with:
           node-version: 20.x
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install rdfind gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename jq
+        run: sudo apt-get update && sudo apt-get install -y rdfind gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl
+      - name: Setup environment
+        run: |
+          export PATH=$PATH:/usr/local/bin
+          export CONFIG_SITE=config.site
+      - name: Run config.status
+        run: |
+          ./config.status
+          continue-on-error: false
       - name: Download the CoreELEC
         run: git clone https://github.com/zainkamal95/CoreELEC
       - name: CoreELEC release tags checkout
