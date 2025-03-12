@@ -1,4 +1,4 @@
-  name: GitHub Automatic Build
+name: GitHub Automatic Build
 
 on:
   push:
@@ -17,20 +17,8 @@ on:
           - false
 
 jobs:
-  omega:
-    ...  # Código actual sin cambios
-
-  nexus:
-    ...  # Código actual sin cambios
-
-  matrix:
-    ...  # Código actual sin cambios
-
-  leia:
-    ...  # Código actual sin cambios
-
-  coreelec_22:
-    name: CoreELEC-22-Amlogic-no
+  coreelec-22:
+    name: CoreELEC-22-Amlogic-no-aarch64
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
@@ -44,7 +32,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install gcc make git unzip wget xz-utils bc gperf zip unzip g++ xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl rename jq
       - name: Download the CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
-      - name: CoreELEC release tags checkout
+      - name: CoreELEC release branch checkout
         run: |
           cd CoreELEC
           git checkout coreelec-22
@@ -66,46 +54,6 @@ jobs:
         id: upload-artifact
         continue-on-error: true
         with:
-          name: CoreELEC-22-Amlogic-no-target
+          name: CoreELEC-22-Amlogic-no-aarch64-target
           path: ${{ github.workspace }}/CoreELEC/target/
           if-no-files-found: error
-
-  release:
-    needs: [ omega, nexus, matrix, leia, coreelec_22 ]
-    strategy:
-      fail-fast: false
-    name: Releases
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag && github.event.inputs.prerelease == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download target
-        uses: actions/download-artifact@v4
-        with:
-          name: target
-          path: ${{ github.workspace }}/target
-      - name: Generate release tag
-        run: |
-          if [ ${{ github.event_name }} == 'push' ]; then
-             echo "release_tag=${GITHUB_REF#refs/heads/}-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
-             echo "prerelease=false" >> $GITHUB_ENV
-          else
-             echo "release_tag=$(echo "${{ github.event.inputs.tag }}" | sed 's/[^A-Z,a-z,0-9]/-/g')" >> $GITHUB_ENV
-             if [ ${{ github.event.inputs.prerelease }} == 'true' ]; then
-                echo "prerelease=true" >> $GITHUB_ENV
-             else
-                echo "prerelease=false" >> $GITHUB_ENV
-             fi
-          fi
-      - name: Releases
-        uses: softprops/action-gh-release@v1
-        with:
-          name: "GitHub Build"
-          tag_name: ${{ env.release_tag }}
-          prerelease: ${{ env.prerelease }}
-          files: ${{ github.workspace }}/target/*/*/*/*/*/*.zip*
-      - name: Upload combined target
-        uses: actions/upload-artifact@v4
-        with:
-          name: combined-target
-          path: ${{ github.workspace }}/target
-
