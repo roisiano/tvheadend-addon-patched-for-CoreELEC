@@ -19,7 +19,7 @@ jobs:
           git checkout origin/coreelec-22
       - name: 😜️ Patches adding ...
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
       - name: 🔍️ Get path
         run: |
           cd ${{ github.workspace }}/CoreELEC
@@ -52,3 +52,4 @@ jobs:
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
+
