@@ -1,0 +1,54 @@
+name: GitHub Automatic Build
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    name: coreelec-22-Amlogic-no
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 🔌️ Checkout
+        uses: actions/checkout@v4
+      - name: 🔨️ Install dependencies
+        run: sudo apt-get update && sudo apt-get install gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
+      - name: 📥️ Download the CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC
+      - name: 📌️ CoreELEC release tags checkout
+        run: |
+          cd CoreELEC
+          git checkout origin/coreelec-22
+      - name: 😜️ Patches adding ...
+        run: |
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
+      - name: 🔍️ Get path
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+      - name: 💽️ Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.sources_dir }}
+            ${{ env.build_dir }}/.ccache
+            ${{ env.build_dir }}/.ccache-local
+          key: ${{ env.project }}-Amlogic-no
+          restore-keys: ${{ env.project }}-
+      - name: 🤔️ adding sources for download errors...
+        run: |
+          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          fi
+      - name: 👷️ Building addons
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
+      - name: 🗜️ Compress addons
+        run: |
+          cd ${{ github.workspace }}/CoreELEC/target
+          zip -rFS9 addons-Amlogic-no.zip addons
+      - name: 📤️ Upload target
+        uses: actions/upload-artifact@v4
+        with:
+          name: target
+          path: ${{ github.workspace }}/CoreELEC/target/*.zip
