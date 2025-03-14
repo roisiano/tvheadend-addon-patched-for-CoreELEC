@@ -17,9 +17,9 @@ jobs:
         run: |
           cd CoreELEC
           git checkout origin/coreelec-22
-      - name: 😜️ Patches adding ...
+      - name: 😜️ Update dvbcsa ...
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
       - name: 🔍️ Get path
         run: |
           cd ${{ github.workspace }}/CoreELEC
@@ -38,11 +38,15 @@ jobs:
           restore-keys: ${{ env.project }}-
       - name: 🤔️ adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
           fi
+      - name: 😮️ Patches adding ...
+        run: |
+          cp ${{ github.workspace }}/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
+          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: 👷️ Building addons
-        run: cd ${{ github.workspace }}/CoreELEC && ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
+        run: cd ${{ github.workspace }}/CoreELEC && ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
       - name: 🗜️ Compress addons
         run: |
           cd ${{ github.workspace }}/CoreELEC/target
@@ -52,4 +56,5 @@ jobs:
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
+
 
