@@ -38,8 +38,8 @@ jobs:
           restore-keys: ${{ env.project }}-
       - name: 🤔️ adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
       - name: 👷️ Building addons
         run: cd ${{ github.workspace }}/CoreELEC && ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
