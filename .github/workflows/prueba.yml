@@ -113,5 +113,6 @@ jobs:
         with:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
+          if-no-files-found: warn
 
 
