@@ -75,6 +75,17 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
+      - name: 🛠️ Patch comskip.c to fix sprintf warnings
+        run: |
+          COMSKIP_PATH="${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/comskip-0.83/comskip.c"
+          if [ -f "$COMSKIP_PATH" ]; then
+            echo "🔧 Patching comskip.c..."
+            sed -i 's/sprintf(/snprintf(/g' "$COMSKIP_PATH"
+            echo "✅ comskip.c patched successfully"
+          else
+            echo "⚠️ comskip.c not found. Skipping patch."
+          fi
+
       - name: 🔍️ Show available addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
