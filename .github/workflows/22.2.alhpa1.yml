@@ -13,7 +13,7 @@ jobs:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Asegura acceso completo al historial de Git
+          fetch-depth: 0
 
       - name: 🔨️ Install dependencies
         run: |
@@ -75,6 +75,18 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
+      - name: 🧩 Build comskip addon
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon comskip || echo "⚠️ comskip failed but continuing"
+
+      - name: 📄 Upload comskip logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comskip-logs
+          path: ${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/.threads/logs/*comskip*.log
+
       - name: 👷️ Build tvheadend addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
@@ -90,3 +102,4 @@ jobs:
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
+
