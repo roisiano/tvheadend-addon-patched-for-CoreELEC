@@ -75,6 +75,11 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
+      - name: ⚙️ Prepare comskip sources
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make comskip:download
+
       - name: 🛠️ Patch comskip.c to fix sprintf warnings
         run: |
           COMSKIP_PATH="${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/comskip-0.83/comskip.c"
@@ -113,3 +118,4 @@ jobs:
         with:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
+
