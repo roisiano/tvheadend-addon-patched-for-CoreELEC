@@ -13,7 +13,7 @@ jobs:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Asegura acceso completo al historial de Git
+          fetch-depth: 0
 
       - name: 🔨️ Install dependencies
         run: |
@@ -32,9 +32,12 @@ jobs:
           git fetch --all
           git checkout 22.0-Piers_alpha1
 
-      - name: 😜️ Apply dvbcsa patch
+      - name: ✍️ Update libdvbcsa version manually
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
+          sed -i 's|PKG_VERSION=".*"|PKG_VERSION="f25351d70589ec97ae6fb7590786c9aa38b999d4"|' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
+          sed -i 's|PKG_SHA256=".*"|PKG_SHA256="807998d0cf33fea4b716f534b9658aa02b185f50e5b143620d58f520b34ce0b7"|' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
 
       - name: 🔍️ Get build paths
         run: |
