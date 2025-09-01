@@ -13,7 +13,7 @@ jobs:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Asegura acceso completo al historial de Git
 
       - name: 🔨️ Install dependencies
         run: |
@@ -23,14 +23,14 @@ jobs:
             xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
 
-      - name: 📥️ Download CoreELEC
+      - name: 📥️ Clone CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
-      - name: 📌️ Checkout CoreELEC release branch
+      - name: 📌️ Checkout coreelec-22 branch
         run: |
           cd CoreELEC
           git fetch --all
-          git checkout 22.0-Piers_alpha1
+          git checkout coreelec-22
 
       - name: ✍️ Update libdvbcsa version manually
         run: |
@@ -62,6 +62,11 @@ jobs:
           if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
           fi
+
+      - name: 🧱 Ensure patch directories exist
+        run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
 
       - name: 😮️ Add patches to tvheadend addons
         run: |
