@@ -75,10 +75,10 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🔍️ List available addons
+      - name: 🔍️ Show available addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ./scripts/create_addon --list
+          ./scripts/create_addon --show-only all
 
       - name: 👷️ Build tvheadend addons
         run: |
