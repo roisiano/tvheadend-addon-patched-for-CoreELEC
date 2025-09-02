@@ -22,7 +22,6 @@ jobs:
             gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
             xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
-
       - name: 📥️ Clone CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
@@ -78,13 +77,16 @@ jobs:
 
       - name: 🩹 Add comskip patch (automatic)
         run: |
-          cat > ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-LS.patch <<'EOF'
+          cat > ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-global-snprintf.patch <<'EOF'
           --- a/comskip.c
           +++ b/comskip.c
           @@
           -    sprintf(
           +    snprintf(
           EOF
+          # En caso de múltiples usos, intentar reemplazo global
+          sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-global-snprintf.patch
 
       - name: 🔍️ Show available addons
         run: |
