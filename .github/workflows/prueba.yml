@@ -66,7 +66,6 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches
 
       - name: 😮️ Add patches to tvheadend addons
         run: |
@@ -75,18 +74,19 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🩹 Add comskip patch (automatic)
+      - name: 🩹 Patch comskip sources (direct sed)
         run: |
-          cat > ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-global-snprintf.patch <<'EOF'
-          --- a/comskip.c
-          +++ b/comskip.c
-          @@
-          -    sprintf(
-          +    snprintf(
-          EOF
-          # En caso de múltiples usos, intentar reemplazo global
-          sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
-            ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-global-snprintf.patch
+          # Buscar el código fuente de comskip descargado por CoreELEC
+          COMSKIP_DIR=$(find ${{ env.sources_dir }} -type d -name "comskip*" | head -n 1)
+          if [ -n "$COMSKIP_DIR" ]; then
+            echo "📂 Encontrado comskip en: $COMSKIP_DIR"
+            # Sustituir todos los sprintf por snprintf de forma global
+            find "$COMSKIP_DIR" -type f -name "*.c" -exec \
+              sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' {} \;
+          else
+            echo "❌ No se encontró el directorio de comskip"
+            exit 1
+          fi
 
       - name: 🔍️ Show available addons
         run: |
