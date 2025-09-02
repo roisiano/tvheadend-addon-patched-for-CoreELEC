@@ -13,6 +13,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🛠️ Crear carpeta .github/sources si no existe
+        run: |
+          mkdir -p ${{ github.workspace }}/.github/sources
+
       - name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
         run: |
           curl -L -o paquetes.zip "https://drive.usercontent.google.com/download?id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14&export=download&authuser=0&confirm=t&uuid=528d16a0-4021-4182-9949-f5d3b8f97996&at=AN8xHorjZgTahnwivBqILaPHUNy1%3A1756824488158"
@@ -22,4 +26,3 @@ jobs:
         run: |
           echo "Contenido de .github/sources:"
           ls -R ${{ github.workspace }}/.github/sources
-
