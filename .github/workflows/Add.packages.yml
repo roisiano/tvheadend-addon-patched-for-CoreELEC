@@ -17,14 +17,16 @@ jobs:
         run: |
           pip install gdown
           gdown --id 1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14 -O paquetes.zip
+
+          # Extraer en carpeta temporal
           mkdir temp_extract
           unzip -o paquetes.zip -d temp_extract
+
+          # Crear destino
           mkdir -p .github/sources
-          if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
-            mv temp_extract/*/* .github/sources/
-          else
-            mv temp_extract/* .github/sources/
-          fi
+
+          # Copiar todo el contenido de temp_extract a .github/sources
+          rsync -av temp_extract/ .github/sources/
 
       - name: 📂 Mostrar estructura final
         run: |
