@@ -1,28 +1,20 @@
-name: Add packages
+- name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
+  run: |
+    # Descargar
+    curl -L -o paquetes.zip "https://drive.usercontent.google.com/download?id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14&export=download"
 
-on:
-  workflow_dispatch:
+    # Comprobar si es realmente un ZIP
+    file paquetes.zip
 
-jobs:
-  add-packages:
-    runs-on: ubuntu-latest
+    # Crear carpeta temporal para descomprimir
+    mkdir temp_extract
+    unzip -o paquetes.zip -d temp_extract
 
-    steps:
-      - name: 🔄 Checkout completo del repositorio
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: 🛠️ Crear carpeta .github/sources si no existe
-        run: |
-          mkdir -p ${{ github.workspace }}/.github/sources
-
-      - name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
-        run: |
-          curl -L -o paquetes.zip "https://drive.usercontent.google.com/download?id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14&export=download&authuser=0&confirm=t&uuid=528d16a0-4021-4182-9949-f5d3b8f97996&at=AN8xHorjZgTahnwivBqILaPHUNy1%3A1756824488158"
-          unzip -o -q paquetes.zip -d ${{ github.workspace }}/.github/sources
-
-      - name: 📂 Mostrar estructura final
-        run: |
-          echo "Contenido de .github/sources:"
-          ls -R ${{ github.workspace }}/.github/sources
+    # Si hay una sola carpeta dentro, mover su contenido directamente
+    if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
+      echo "Detectada carpeta raíz dentro del ZIP, moviendo contenido..."
+      mv temp_extract/*/* .github/sources/
+    else
+      echo "No hay carpeta raíz única, copiando todo..."
+      mv temp_extract/* .github/sources/
+    fi
