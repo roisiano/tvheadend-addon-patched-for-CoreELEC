@@ -60,6 +60,7 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          fi
 
       - name: 🧱 Ensure patch directories exist
         run: |
