@@ -1,11 +1,32 @@
-name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
-  run: |
-    curl -L -o paquetes.zip "https://drive.google.com/uc?export=download&id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14"
-    mkdir temp_extract
-    unzip -o paquetes.zip -d temp_extract
-    mkdir -p .github/sources
-    if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
-      mv temp_extract/*/* .github/sources/
-    else
-      mv temp_extract/* .github/sources/
-    fi
+name: Add packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  add-packages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔄 Checkout completo del repositorio
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
+        run: |
+          pip install gdown
+          gdown --id 1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14 -O paquetes.zip
+          mkdir temp_extract
+          unzip -o paquetes.zip -d temp_extract
+          mkdir -p .github/sources
+          if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
+            mv temp_extract/*/* .github/sources/
+          else
+            mv temp_extract/* .github/sources/
+          fi
+
+      - name: 📂 Mostrar estructura final
+        run: |
+          echo "Contenido de .github/sources:"
+          ls -R .github/sources
