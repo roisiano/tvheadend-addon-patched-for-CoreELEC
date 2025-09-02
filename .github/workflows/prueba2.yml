@@ -1,4 +1,4 @@
-name: GitHub Automatic Build
+name: GitHub Manual Build
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            gcc g++ make git wget zip unzip xz-utils bc curl gperf xsltproc \
+            gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
             xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
 
@@ -56,17 +56,11 @@ jobs:
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔️ Link sources if needed
-        run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
-          fi
-
       - name: 🧱 Ensure patch directories exist
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches
 
       - name: 😮️ Add patches to tvheadend addons
         run: |
@@ -75,25 +69,27 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🩹 Apply global snprintf patch to comskip
+      - name: 🩹 Add comskip patch (global snprintf)
         run: |
-          cd ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip
-          find . -type f -name "*.c" -exec sed -i 's/\bsprintf\b/snprintf/g' {} +
-
-      - name: 👷‍♂️ Build comskip
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make comskip
+          cat > ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch <<'EOF'
+          --- a/comskip.c
+          +++ b/comskip.c
+          @@
+          -    sprintf(
+          +    snprintf(
+          EOF
+          sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch
 
       - name: 🔍️ Show available addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
           ./scripts/create_addon --show-only all
 
-      - name: 👷️ Build tvheadend addons
+      - name: 👷️ Build addons (comskip + tvheadend)
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon comskip tvheadend42 tvheadend43
 
       - name: 🗜️ Compress built addons
         run: |
@@ -113,3 +109,4 @@ jobs:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
           if-no-files-found: warn
+
