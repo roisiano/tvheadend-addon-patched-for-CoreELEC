@@ -80,3 +80,11 @@ jobs:
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
+          
+      - name: 📄 Upload build logs if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: ${{ env.build_dir }}/.threads/logs/
+          if-no-files-found: warn
