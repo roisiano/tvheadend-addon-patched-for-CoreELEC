@@ -22,6 +22,7 @@ jobs:
             gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
             xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
+
       - name: 📥️ Clone CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
@@ -66,6 +67,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches
 
       - name: 😮️ Add patches to tvheadend addons
         run: |
@@ -74,13 +76,26 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🩹 Patch comskip sources (direct sed)
+      - name: 🩹 Add comskip patch (automatic)
         run: |
-          # Buscar el código fuente de comskip descargado por CoreELEC
+          cat > ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-LS.patch <<'EOF'
+          --- a/comskip.c
+          +++ b/comskip.c
+          @@
+          -    sprintf(
+          +    snprintf(
+          EOF
+
+      - name: 🧪 Apply comskip patch
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          scripts/build comskip:patch || echo "⚠️ El parche de comskip se aplicó parcialmente o ya estaba aplicado"
+
+      - name: 🩹 Patch comskip sources (sed refuerzo)
+        run: |
           COMSKIP_DIR=$(find ${{ env.sources_dir }} -type d -name "comskip*" | head -n 1)
           if [ -n "$COMSKIP_DIR" ]; then
             echo "📂 Encontrado comskip en: $COMSKIP_DIR"
-            # Sustituir todos los sprintf por snprintf de forma global
             find "$COMSKIP_DIR" -type f -name "*.c" -exec \
               sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' {} \;
           else
