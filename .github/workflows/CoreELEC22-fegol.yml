@@ -1,6 +1,6 @@
 name: GitHub Automatic Build
 on:
-  push:
+##  push:
   workflow_dispatch:
 jobs:
   build:
