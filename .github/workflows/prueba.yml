@@ -1,7 +1,7 @@
 name: GitHub Automatic Build
 
 on:
-  workflow_dispatch:  # ejecución solo manual
+  workflow_dispatch:
 
 jobs:
   build:
@@ -60,6 +60,7 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          fi
 
       - name: 🧱 Ensure patch directories exist
         run: |
@@ -74,21 +75,19 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🩹 Apply comskip patch (continue on error)
+      - name: 🩹 Add comskip patch (automatic)
         continue-on-error: true
         run: |
-          COMSKIP_DIR="${{ env.sources_dir }}/addon-depends/comskip"
-          mkdir -p "$COMSKIP_DIR/patches"
-          cat > "$COMSKIP_DIR/patches/comskip-100-global-snprintf.patch" <<'EOF'
+          cat > ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch <<'EOF'
           --- a/comskip.c
           +++ b/comskip.c
           @@
           -    sprintf(
           +    snprintf(
           EOF
-          # Reemplazo global
-          find "$COMSKIP_DIR" -type f \( -name '*.c' -o -name '*.cpp' \) -exec sed -i \
-            -E 's/sprintf\(([^,]+),/snprintf(\1, sizeof(\1),/' {} +
+          # En caso de múltiples usos, intentar reemplazo global
+          sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch
 
       - name: 🔍️ Show available addons
         run: |
@@ -118,5 +117,6 @@ jobs:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
           if-no-files-found: warn
+
 
 
