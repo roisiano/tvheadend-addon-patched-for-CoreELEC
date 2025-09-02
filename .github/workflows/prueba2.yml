@@ -1,4 +1,4 @@
-name: GitHub Manual Build
+name: GitHub Automatic Build
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
+            gcc g++ make git wget zip unzip xz-utils bc curl gperf xsltproc \
             xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
 
@@ -56,6 +56,12 @@ jobs:
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
 
+      - name: 🤔️ Link sources if needed
+        run: |
+          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          fi
+
       - name: 🧱 Ensure patch directories exist
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
@@ -78,6 +84,7 @@ jobs:
           -    sprintf(
           +    snprintf(
           EOF
+          # En caso de múltiples usos, reemplazo global
           sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
             ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch
 
@@ -86,10 +93,10 @@ jobs:
           cd ${{ github.workspace }}/CoreELEC
           ./scripts/create_addon --show-only all
 
-      - name: 👷️ Build addons (comskip + tvheadend)
+      - name: 👷️ Build tvheadend addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon comskip tvheadend42 tvheadend43
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
 
       - name: 🗜️ Compress built addons
         run: |
@@ -109,4 +116,5 @@ jobs:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
           if-no-files-found: warn
+
 
