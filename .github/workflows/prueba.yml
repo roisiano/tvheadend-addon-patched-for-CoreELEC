@@ -76,32 +76,12 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 🩹 Add comskip patch (automatic)
+      - name: 🧼 Reemplazo global de sprintf por snprintf en comskip
         run: |
-          cat > ${{ github.workspace }}/CoreELEC/packages/addons/tools/comskip/patches/comskip-100-LS.patch <<'EOF'
-          --- a/comskip.c
-          +++ b/comskip.c
-          @@
-          -    sprintf(
-          +    snprintf(
-          EOF
-
-      - name: 🧪 Apply comskip patch
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          scripts/build comskip:patch || echo "⚠️ El parche de comskip se aplicó parcialmente o ya estaba aplicado"
-
-      - name: 🩹 Patch comskip sources (sed refuerzo)
-        run: |
-          COMSKIP_DIR=$(find ${{ env.sources_dir }} -type d -name "comskip*" | head -n 1)
-          if [ -n "$COMSKIP_DIR" ]; then
-            echo "📂 Encontrado comskip en: $COMSKIP_DIR"
-            find "$COMSKIP_DIR" -type f -name "*.c" -exec \
-              sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' {} \;
-          else
-            echo "❌ No se encontró el directorio de comskip"
-            exit 1
-          fi
+          COMSKIP_DIR="${{ env.build_dir }}/comskip-0.83"
+          mkdir -p "$COMSKIP_DIR" # por si aún no existe
+          find "$COMSKIP_DIR" -type f \( -name '*.c' -o -name '*.cpp' \) -exec sed -i \
+            -E 's/sprintf\(([^,]+),/snprintf(\1, sizeof(\1),/' {} +
 
       - name: 🔍️ Show available addons
         run: |
