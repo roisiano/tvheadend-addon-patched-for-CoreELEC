@@ -1,20 +1,34 @@
-- name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
-  run: |
-    # Descargar
-    curl -L -o paquetes.zip "https://drive.usercontent.google.com/download?id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14&export=download"
+name: Add packages
 
-    # Comprobar si es realmente un ZIP
-    file paquetes.zip
+on:
+  workflow_dispatch:
 
-    # Crear carpeta temporal para descomprimir
-    mkdir temp_extract
-    unzip -o paquetes.zip -d temp_extract
+jobs:
+  add-packages:
+    runs-on: ubuntu-latest
 
-    # Si hay una sola carpeta dentro, mover su contenido directamente
-    if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
-      echo "Detectada carpeta raíz dentro del ZIP, moviendo contenido..."
-      mv temp_extract/*/* .github/sources/
-    else
-      echo "No hay carpeta raíz única, copiando todo..."
-      mv temp_extract/* .github/sources/
-    fi
+    steps:
+      - name: 🔄 Checkout completo del repositorio
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Descargar y descomprimir Paquetes.fuentes.zip desde Google Drive
+        run: |
+          curl -L -o paquetes.zip "https://drive.usercontent.google.com/download?id=1VjruFQxS_cxLOSTNCI-6eAWLiLBYSQ14&export=download"
+          file paquetes.zip
+          mkdir temp_extract
+          unzip -o paquetes.zip -d temp_extract
+          mkdir -p .github/sources
+          if [ $(ls -1 temp_extract | wc -l) -eq 1 ] && [ -d temp_extract/* ]; then
+            echo "Detectada carpeta raíz dentro del ZIP, moviendo contenido..."
+            mv temp_extract/*/* .github/sources/
+          else
+            echo "No hay carpeta raíz única, copiando todo..."
+            mv temp_extract/* .github/sources/
+          fi
+
+      - name: 📂 Mostrar estructura final
+        run: |
+          echo "Contenido de .github/sources:"
+          ls -R .github/sources
