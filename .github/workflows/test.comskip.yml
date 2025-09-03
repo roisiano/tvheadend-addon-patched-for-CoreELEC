@@ -1,0 +1,27 @@
+name: Test Comskip Patch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-comskip:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 🔌 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧪 Test parche Comskip FFmpeg5
+        run: |
+          sudo apt-get update && sudo apt-get install -y build-essential patch pkg-config \
+              libavcodec-dev libavformat-dev libavutil-dev wget
+          wget https://codeload.github.com/erikkaashoek/Comskip/tar.gz/refs/tags/V0.83 -O comskip-0.83.tar.gz
+          tar xzf comskip-0.83.tar.gz
+          cd Comskip-0.83
+          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
+          echo "Aplicando parche..."
+          patch -p1 < comskip-ffmpeg5.patch
+          echo "Compilando..."
+          ./configure
+          make -j$(nproc)
+          echo "Prueba de ejecución..."
+          ./comskip --help
