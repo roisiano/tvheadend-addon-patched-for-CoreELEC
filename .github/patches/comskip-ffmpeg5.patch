@@ -24,7 +24,7 @@ index 5f1f4b7..b8a1c2d 100644
 +    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
 +        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
 +#endif
- 
+
      if (fps < 1.0)
          fps = 25.0;
 diff --git a/mpeg2dec.c b/mpeg2dec.c
@@ -60,3 +60,4 @@ index 4a2b3c1..d7e8f9a 100644
  
 -    av_free_packet(&pkt);
 +    av_packet_unref(&pkt);
+
