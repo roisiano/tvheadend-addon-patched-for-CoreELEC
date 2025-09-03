@@ -54,7 +54,7 @@ jobs:
           i=0
           while [[ $i -lt ${#QUEUE[@]} ]]; do
             get_deps "${QUEUE[$i]}"
-            ((i++))
+            i=$((i+1))   # ← cambio para evitar fallo con set -e
           done
 
           echo "📦 Paquetes a comprobar:"
