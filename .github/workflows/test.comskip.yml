@@ -12,16 +12,17 @@ jobs:
 
       - name: 🧪 Test parche Comskip FFmpeg5
         run: |
+          set -e
           sudo apt-get update && sudo apt-get install -y build-essential patch pkg-config \
-              libavcodec-dev libavformat-dev libavutil-dev wget
+              libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake
           wget https://codeload.github.com/erikkaashoek/Comskip/tar.gz/refs/tags/V0.83 -O comskip-0.83.tar.gz
-          tar xzf comskip-0.83.tar.gz
-          cd Comskip-0.83
+          mkdir comskip-src && tar --strip=1 -xzf comskip-0.83.tar.gz -C comskip-src
+          cd comskip-src
           cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
           echo "Aplicando parche..."
           patch -p1 < comskip-ffmpeg5.patch
           echo "Compilando..."
           ./configure
-          make -j$(nproc)
+          make -j"$(nproc)"
           echo "Prueba de ejecución..."
           ./comskip --help
