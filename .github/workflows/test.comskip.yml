@@ -10,35 +10,48 @@ jobs:
       - name: 🔌 Checkout
         uses: actions/checkout@v4
 
-      - name: 🧪 Test parche Comskip FFmpeg5
+      - name: 🧪 Instalar dependencias
         run: |
-          set -e
-          sudo apt-get update && sudo apt-get install -y build-essential pkg-config \
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config \
               libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake git
-          
-          # Descargar código fuente de Comskip
+
+      - name: 📥 Descargar Comskip
+        run: |
           wget https://codeload.github.com/erikkaashoek/Comskip/tar.gz/refs/tags/V0.83 -O comskip-0.83.tar.gz
-          mkdir comskip-src && tar --strip=1 -xzf comskip-0.83.tar.gz -C comskip-src
+          mkdir comskip-src
+          tar --strip=1 -xzf comskip-0.83.tar.gz -C comskip-src
+
+      - name: 📝 Copiar parche
+        run: |
           cd comskip-src
-          
-          # Inicializar repo git para usar git apply
-          git init -q
+          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
+
+      - name: 🧰 Inicializar git (para aplicar el parche)
+        run: |
+          cd comskip-src
+          git init >/dev/null 2>&1
           git config user.name "dummy"
           git config user.email "dummy@example.com"
-          git add .
-          git commit -m "import Comskip V0.83" >/dev/null
-          
-          # Copiar parche desde el repo actual
-          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
-          
+
+      - name: ⚡ Aplicar parche con fallback
+        run: |
+          cd comskip-src
           echo "Aplicando parche..."
-          git apply --ignore-space-change --ignore-whitespace comskip-ffmpeg5.patch
-          
-          echo "Compilando..."
+          if ! git apply --ignore-space-change --ignore-whitespace comskip-ffmpeg5.patch; then
+            echo "git apply falló, probando con patch -p1..."
+            patch -p1 < comskip-ffmpeg5.patch
+          fi
+
+      - name: 🔨 Compilar Comskip
+        run: |
+          cd comskip-src
           ./configure
           make -j"$(nproc)"
-          
-          echo "Prueba de ejecución..."
+
+      - name: 🏃‍♂️ Probar ejecución
+        run: |
+          cd comskip-src
           ./comskip --help
 
 
