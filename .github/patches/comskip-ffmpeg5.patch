@@ -26,38 +26,3 @@ index 5f1f4b7..b8a1c2d 100644
 
      if (fps < 1.0)
          fps = 25.0;
-diff --git a/mpeg2dec.c b/mpeg2dec.c
-index 4a2b3c1..d7e8f9a 100644
---- a/mpeg2dec.c
-+++ b/mpeg2dec.c
-@@ -452,8 +452,15 @@ static void mpeg2_decode_frame(AVCodecContext *avctx, AVFrame *picture)
-     frame_delay = av_q2d(avctx->time_base);
--    if (avctx->ticks_per_frame > 1)
--        frame_delay /= avctx->ticks_per_frame;
-+#if LIBAVCODEC_VERSION_MAJOR >= 59
-+    {
-+        double tpf_val = av_q2d(avctx->framerate);
-+        if (tpf_val > 1.0)
-+            frame_delay /= tpf_val;
-+    }
-+#else
-+    if (avctx->ticks_per_frame > 1)
-+        frame_delay /= avctx->ticks_per_frame;
-+#endif
- 
-     /* decode video frame */
--    int got_picture;
--    avcodec_decode_video2(avctx, picture, &got_picture, &pkt);
--    if (got_picture) {
--        process_frame(picture);
--    }
-+    if (avcodec_send_packet(avctx, &pkt) == 0) {
-+        while (avcodec_receive_frame(avctx, picture) == 0) {
-+            process_frame(picture);
-+        }
-+    }
- 
--    av_free_packet(&pkt);
-+    av_packet_unref(&pkt);
-
-
