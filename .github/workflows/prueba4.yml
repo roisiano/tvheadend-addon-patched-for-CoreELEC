@@ -33,6 +33,11 @@ jobs:
         run: |
           patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
+- name: 📌 Parchear comskip para FFmpeg 5
+  run: |
+    patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch
+
+
       - name: 🔍️ Get path
         run: |
           cd ${{ github.workspace }}/CoreELEC
