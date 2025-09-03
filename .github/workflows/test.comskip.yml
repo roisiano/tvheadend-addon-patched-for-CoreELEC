@@ -14,42 +14,39 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config \
-              libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake git
+              libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake dos2unix git
 
-      - name: 📥 Descargar Comskip
+      - name: 📦 Descargar Comskip 0.83
         run: |
           wget https://codeload.github.com/erikkaashoek/Comskip/tar.gz/refs/tags/V0.83 -O comskip-0.83.tar.gz
           mkdir comskip-src
           tar --strip=1 -xzf comskip-0.83.tar.gz -C comskip-src
 
-      - name: 📝 Copiar parche
+      - name: 📝 Preparar parche
         run: |
           cd comskip-src
           cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
+          # Convertir a LF para evitar corrupt patch
+          dos2unix comskip-ffmpeg5.patch
 
-      - name: 🧰 Inicializar git (para aplicar el parche)
+      - name: 🔧 Aplicar parche
         run: |
           cd comskip-src
+          # Inicializar git para que git apply funcione
           git init >/dev/null 2>&1
           git config user.name "dummy"
           git config user.email "dummy@example.com"
-
-      - name: ⚡ Aplicar parche con fallback
-        run: |
-          cd comskip-src
           echo "Aplicando parche..."
-          if ! git apply --ignore-space-change --ignore-whitespace comskip-ffmpeg5.patch; then
-            echo "git apply falló, probando con patch -p1..."
-            patch -p1 < comskip-ffmpeg5.patch
-          fi
+          git apply --ignore-space-change --ignore-whitespace comskip-ffmpeg5.patch || \
+          { echo "git apply falló, intentando patch -p1..."; patch -p1 < comskip-ffmpeg5.patch; }
 
-      - name: 🔨 Compilar Comskip
+      - name: ⚡ Compilar Comskip
         run: |
           cd comskip-src
           ./configure
           make -j"$(nproc)"
 
-      - name: 🏃‍♂️ Probar ejecución
+      - name: ✅ Probar ejecución
         run: |
           cd comskip-src
           ./comskip --help
