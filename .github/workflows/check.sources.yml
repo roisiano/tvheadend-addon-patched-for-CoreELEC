@@ -1,0 +1,52 @@
+name: Check Sources Availability
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-sources:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 🔌 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Clone CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC --branch coreelec-22 --depth 1
+
+      - name: 📌 Get build paths
+        run: |
+          cd CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
+
+      - name: 🔍 Check sources availability
+        run: |
+          MISSING=0
+          echo "🔎 Comprobando fuentes necesarias..."
+          for PKG in \
+            "CoreELEC/packages/multimedia/ffmpeg/package.mk:FFmpeg" \
+            "CoreELEC/packages/addons/service/tvheadend42/package.mk:tvheadend42" \
+            "CoreELEC/packages/addons/service/tvheadend43/package.mk:tvheadend43"
+          do
+            FILE_PATH="${PKG%%:*}"
+            NAME="${PKG##*:}"
+            URL=$(grep '^PKG_URL=' "$FILE_PATH" | cut -d'"' -f2)
+            FILE=$(basename "$URL")
+            echo "➡ $NAME → $URL"
+            if curl --head --silent --fail "$URL" >/dev/null; then
+              echo "   ✅ Disponible online"
+            elif [ -f "${{ github.workspace }}/sources/$FILE" ]; then
+              echo "   ✅ Encontrado en sources locales"
+            else
+              echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
+              MISSING=$((MISSING+1))
+            fi
+          done
+          if [ "$MISSING" -gt 0 ]; then
+            echo "❌ $MISSING paquete(s) con fuentes no disponibles"
+            exit 1
+          else
+            echo "🎉 Todo OK: todas las fuentes están disponibles"
+          fi
