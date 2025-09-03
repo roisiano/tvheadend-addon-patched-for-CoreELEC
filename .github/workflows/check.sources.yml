@@ -21,7 +21,7 @@ jobs:
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
 
-      - name: 🔍 Check sources availability
+      - name: 🔍 Check sources availability (with variable expansion)
         run: |
           MISSING=0
           echo "🔎 Comprobando fuentes necesarias..."
@@ -32,10 +32,18 @@ jobs:
           do
             FILE_PATH="${PKG%%:*}"
             NAME="${PKG##*:}"
-            URL=$(grep '^PKG_URL=' "$FILE_PATH" | cut -d'"' -f2)
+
+            # Cargar variables del package.mk en un subshell limpio
+            PKG_VERSION=""
+            PKG_URL=""
+            eval "$(grep -E '^PKG_VERSION=|^PKG_URL=' "$FILE_PATH" | sed 's/^/export /')"
+
+            # Expandir variables en la URL
+            URL=$(eval echo "$PKG_URL")
             FILE=$(basename "$URL")
+
             echo "➡ $NAME → $URL"
-            if curl --head --silent --fail "$URL" >/dev/null; then
+            if [ -n "$URL" ] && curl --head --silent --fail "$URL" >/dev/null; then
               echo "   ✅ Disponible online"
             elif [ -f "${{ github.workspace }}/sources/$FILE" ]; then
               echo "   ✅ Encontrado en sources locales"
@@ -44,6 +52,7 @@ jobs:
               MISSING=$((MISSING+1))
             fi
           done
+
           if [ "$MISSING" -gt 0 ]; then
             echo "❌ $MISSING paquete(s) con fuentes no disponibles"
             exit 1
