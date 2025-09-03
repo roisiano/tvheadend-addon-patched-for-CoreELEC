@@ -1,0 +1,19 @@
+--- a/src/transcoding/transcode/video.c
++++ b/src/transcoding/transcode/video.c
+@@ -269,8 +269,17 @@ tvh_video_context_open_encoder(TVHVideoContext *self)
+ 
+   /* Set ticks_per_frame for MPEG-TS timebase */
+-  self->oavctx->ticks_per_frame = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num; // We assume 90kHz as timebase which is mandatory for MPEG-TS
+-  ticks_per_frame = av_make_q(self->oavctx->ticks_per_frame, 1);
++#if LIBAVCODEC_VERSION_MAJOR < 59
++  self->oavctx->ticks_per_frame = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num;
++  ticks_per_frame = av_make_q(self->oavctx->ticks_per_frame, 1);
++#else
++  /* FFmpeg >= 5: ticks_per_frame eliminado, calculamos directamente */
++  if (self->oavctx->framerate.num > 0 && self->oavctx->framerate.den > 0) {
++    int tpf_val = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num;
++    ticks_per_frame = av_make_q(tpf_val, 1);
++  } else {
++    ticks_per_frame = av_make_q(1, 1);
++  }
++#endif
