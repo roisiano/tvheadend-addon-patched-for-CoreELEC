@@ -1,8 +1,9 @@
 diff --git a/comskip.c b/comskip.c
-index 7f3b2f1..c8a9d3e 100644
+index 5f1f4b7..b8a1c2d 100644
 --- a/comskip.c
 +++ b/comskip.c
-@@
+@@ -1234,9 +1234,21 @@ int some_function_open_video(AVFormatContext *pFormatCtx, int i)
+ 
 -    fps = av_q2d(pFormatCtx->streams[i]->r_frame_rate);
 -    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
 -        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
@@ -23,11 +24,15 @@ index 7f3b2f1..c8a9d3e 100644
 +    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
 +        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
 +#endif
+ 
+     if (fps < 1.0)
+         fps = 25.0;
 diff --git a/mpeg2dec.c b/mpeg2dec.c
-index 1b2c3d4..e5f6a7b 100644
+index 4a2b3c1..d7e8f9a 100644
 --- a/mpeg2dec.c
 +++ b/mpeg2dec.c
-@@
+@@ -452,8 +452,15 @@ static void mpeg2_decode_frame(AVCodecContext *avctx, AVFrame *picture)
+     frame_delay = av_q2d(avctx->time_base);
 -    if (avctx->ticks_per_frame > 1)
 -        frame_delay /= avctx->ticks_per_frame;
 +#if LIBAVCODEC_VERSION_MAJOR >= 59
@@ -40,18 +45,19 @@ index 1b2c3d4..e5f6a7b 100644
 +    if (avctx->ticks_per_frame > 1)
 +        frame_delay /= avctx->ticks_per_frame;
 +#endif
-@@
+ 
+     /* decode video frame */
 -    int got_picture;
 -    avcodec_decode_video2(avctx, picture, &got_picture, &pkt);
 -    if (got_picture) {
--        // procesamiento de frame
+-        process_frame(picture);
 -    }
 +    if (avcodec_send_packet(avctx, &pkt) == 0) {
 +        while (avcodec_receive_frame(avctx, picture) == 0) {
-+            // procesamiento de frame
++            process_frame(picture);
 +        }
 +    }
-@@
+ 
 -    av_free_packet(&pkt);
 +    av_packet_unref(&pkt);
 
