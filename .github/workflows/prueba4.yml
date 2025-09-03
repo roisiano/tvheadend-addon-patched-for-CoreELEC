@@ -33,11 +33,12 @@ jobs:
         run: |
           patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
-- name: 🛠️ Parchear comskip para FFmpeg 5
-  run: |
-    cd ${{ env.build_dir }}/comskip-0.83
-    patch -p1 < ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch
-
+      # 🆕 Copiar el parche de comskip a la carpeta oficial de parches de CoreELEC
+      - name: 🛠️ Añadir parche comskip FFmpeg 5
+        run: |
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches
+          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-ffmpeg5.patch
 
       - name: 🔍️ Get path
         run: |
@@ -97,3 +98,4 @@ jobs:
           name: build-logs
           path: ${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/.threads/logs/
           if-no-files-found: warn
+
