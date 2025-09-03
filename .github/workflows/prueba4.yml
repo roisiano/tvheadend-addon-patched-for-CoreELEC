@@ -31,7 +31,7 @@ jobs:
 
       - name: 😜️ Update dvbcsa ...
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
       - name: 🔍️ Get path
         run: |
@@ -53,8 +53,8 @@ jobs:
 
       - name: 🤔️ adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
       - name: 📁️ Ensure patch directory exists
@@ -63,11 +63,9 @@ jobs:
 
       - name: 😮️ Patches adding ...
         run: |
-      - name: 😮️ Patches adding ...
-        run: |
-          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-          cp ${{ github.workspace }}/patches/tvheadend43-101-ffmpeg-compat.patch \
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-101-ffmpeg-compat.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-101-LS.patch
 
       - name: 👷️ Building addon
