@@ -54,7 +54,7 @@ jobs:
           i=0
           while [[ $i -lt ${#QUEUE[@]} ]]; do
             get_deps "${QUEUE[$i]}"
-            i=$((i+1))   # ← cambio para evitar fallo con set -e
+            i=$((i+1))
           done
 
           echo "📦 Paquetes a comprobar:"
@@ -66,14 +66,21 @@ jobs:
             URL=$(eval echo "$PKG_URL")
             FILE=$(basename "$URL")
             NAME=$(basename "$(dirname "$pkgfile")")
+
+            # Si no hay URL, es un paquete virtual o sin fuente → lo saltamos
+            if [[ -z "$URL" ]]; then
+              echo "➡ $NAME → (paquete sin fuente, se omite)"
+              continue
+            fi
+
             echo "➡ $NAME → $URL"
-            if [[ -n "$URL" ]] && curl --head --silent --fail "$URL" >/dev/null; then
+            if curl --head --silent --fail "$URL" >/dev/null; then
               echo "   ✅ Disponible online"
             elif [[ -f "${{ github.workspace }}/sources/$FILE" ]]; then
               echo "   ✅ Encontrado en sources locales"
             else
               echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
-              ((MISSING++))
+              MISSING=$((MISSING+1))
             fi
           done
 
