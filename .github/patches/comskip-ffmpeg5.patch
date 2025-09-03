@@ -1,47 +1,57 @@
 diff --git a/comskip.c b/comskip.c
-index 1234567..89abcde 100644
+index 7f3b2f1..c8a9d3e 100644
 --- a/comskip.c
 +++ b/comskip.c
-@@ -1234,7 +1234,13 @@ static void video_packet_process(AVStream *st, ...)
-     if (st->avg_frame_rate.num && st->avg_frame_rate.den)
-         fps = av_q2d(st->avg_frame_rate);
-     else
--        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
+@@
+-    fps = av_q2d(pFormatCtx->streams[i]->r_frame_rate);
+-    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
+-        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
++    fps = av_q2d(pFormatCtx->streams[i]->r_frame_rate);
 +#if LIBAVCODEC_VERSION_MAJOR >= 59
-+        if (st->codecpar->framerate.num && st->codecpar->framerate.den)
-+            fps = av_q2d(st->codecpar->framerate);
-+        else
-+            fps = 1.0 / av_q2d(st->time_base);
++    {
++        AVCodecParameters *codecpar = pFormatCtx->streams[i]->codecpar;
++        AVCodecContext *pCodecCtx = avcodec_alloc_context3(NULL);
++        if (avcodec_parameters_to_context(pCodecCtx, codecpar) < 0) {
++            fprintf(stderr, "Error copying codec parameters\n");
++            return -1;
++        }
++        if (pCodecCtx->ticks_per_frame > 1)
++            fps /= pCodecCtx->ticks_per_frame;
++        avcodec_free_context(&pCodecCtx);
++    }
 +#else
-+        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
++    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
++        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
 +#endif
- 
-     /* resto de la función… */
- }
-@@ -1891,7 +1897,9 @@ static int stream_component_open(AVFormatContext *ic, int stream_index)
-     codec = avcodec_find_decoder(avctx->codec_id);
-     if (!codec)
-         return -1;
--    avctx->ticks_per_frame = st->codec->ticks_per_frame;
-+#if LIBAVCODEC_VERSION_MAJOR < 59
-+    avctx->ticks_per_frame = st->codec->ticks_per_frame;
-+#endif
-     /* resto de la función… */
- }
-@@ -2450,7 +2458,13 @@ static int file_open(const char *filename)
-     if (st->avg_frame_rate.num && st->avg_frame_rate.den)
-         fps = av_q2d(st->avg_frame_rate);
-     else
--        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
+diff --git a/mpeg2dec.c b/mpeg2dec.c
+index 1b2c3d4..e5f6a7b 100644
+--- a/mpeg2dec.c
++++ b/mpeg2dec.c
+@@
+-    if (avctx->ticks_per_frame > 1)
+-        frame_delay /= avctx->ticks_per_frame;
 +#if LIBAVCODEC_VERSION_MAJOR >= 59
-+        if (st->codecpar->framerate.num && st->codecpar->framerate.den)
-+            fps = av_q2d(st->codecpar->framerate);
-+        else
-+            fps = 1.0 / av_q2d(st->time_base);
++    {
++        double tpf_val = av_q2d(avctx->framerate);
++        if (tpf_val > 1.0)
++            frame_delay /= tpf_val;
++    }
 +#else
-+        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
++    if (avctx->ticks_per_frame > 1)
++        frame_delay /= avctx->ticks_per_frame;
 +#endif
- 
-     /* resto de la función… */
- }
+@@
+-    int got_picture;
+-    avcodec_decode_video2(avctx, picture, &got_picture, &pkt);
+-    if (got_picture) {
+-        // procesamiento de frame
+-    }
++    if (avcodec_send_packet(avctx, &pkt) == 0) {
++        while (avcodec_receive_frame(avctx, picture) == 0) {
++            // procesamiento de frame
++        }
++    }
+@@
+-    av_free_packet(&pkt);
++    av_packet_unref(&pkt);
 
