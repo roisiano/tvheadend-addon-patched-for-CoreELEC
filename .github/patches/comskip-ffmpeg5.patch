@@ -1,0 +1,40 @@
+--- a/mpeg2dec.c
++++ b/mpeg2dec.c
+@@ -1308,7 +1308,15 @@ video_packet_process(...)
+ 
+-           frame_delay = av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame ;
++#if LIBAVCODEC_VERSION_MAJOR < 59
++           frame_delay = av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame;
++#else
++           {
++               int tpf_val = 1;
++               if (is->dec_ctx->framerate.num > 0 && is->dec_ctx->framerate.den > 0) {
++                   tpf_val = (90000 * is->dec_ctx->framerate.den) / is->dec_ctx->framerate.num;
++               }
++               frame_delay = av_q2d(is->dec_ctx->time_base) * tpf_val;
++           }
++#endif
+ 
+@@ -1891,7 +1899,11 @@ stream_component_open(...)
+ 
+-            is->dec_ctx->ticks_per_frame = 1;
++#if LIBAVCODEC_VERSION_MAJOR < 59
++            is->dec_ctx->ticks_per_frame = 1;
++#else
++            /* FFmpeg >= 5: ticks_per_frame eliminado, no se asigna */
++#endif
+ 
+@@ -2078,7 +2090,15 @@ file_open(...)
+ 
+-            is->fps = 1/(av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame );
++#if LIBAVCODEC_VERSION_MAJOR < 59
++            is->fps = 1/(av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame);
++#else
++            {
++                int tpf_val = 1;
++                if (is->dec_ctx->framerate.num > 0 && is->dec_ctx->framerate.den > 0) {
++                    tpf_val = (90000 * is->dec_ctx->framerate.den) / is->dec_ctx->framerate.num;
++                }
++                is->fps = 1/(av_q2d(is->dec_ctx->time_base) * tpf_val);
++            }
++#endif
