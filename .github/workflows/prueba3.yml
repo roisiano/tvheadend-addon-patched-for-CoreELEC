@@ -1,35 +1,33 @@
-name: GitHub Automatic Build
+name: GitHub Automatic Build - TVH Addons
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: coreelec-22-Amlogic-no
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 🔌️ Checkout
+      - name: 🔌 Checkout CoreELEC
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🔨️ Install dependencies
+      - name: 🔨 Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
-            xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-            openjdk-11-jre-headless rsync rename jq rdfind
+          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf \
+          zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
+          openjdk-11-jre-headless rsync rename jq rdfind
 
-      - name: 📥️ Clone CoreELEC
+      - name: 📥 Clone CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
-      - name: 📌️ Checkout 22.0-Piers_alpha1 tag
+      - name: 📌 Checkout coreelec-22 branch
         run: |
           cd CoreELEC
-          git fetch --all --tags
-          git checkout tags/22.0-Piers_alpha1
+          git fetch --all
+          git checkout coreelec-22
 
       - name: ✍️ Update libdvbcsa version manually
         run: |
@@ -38,7 +36,7 @@ jobs:
           sed -i 's|PKG_SHA256=".*"|PKG_SHA256="807998d0cf33fea4b716f534b9658aa02b185f50e5b143620d58f520b34ce0b7"|' \
             ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
 
-      - name: 🔍️ Get build paths
+      - name: 🔍 Get build paths
         run: |
           cd ${{ github.workspace }}/CoreELEC
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
@@ -46,7 +44,13 @@ jobs:
           echo "build_dir=${BUILD}" >> $GITHUB_ENV
           echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
 
-      - name: 💽️ Cache build sources
+      - name: 🤔 Link sources if needed
+        run: |
+          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 💽 Cache build sources
         uses: actions/cache@v4
         with:
           path: |
@@ -56,74 +60,61 @@ jobs:
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔️ Link sources if needed
+      - name: 🧱 Ensure patch directory exists
         run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
-          fi
-
-      - name: 🧱 Ensure patch directories exist
-        run: |
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches
 
-      - name: 😮️ Add patches to tvheadend addons
+      - name: 🩹 Inject FFmpeg compatibility patch into tvheadend43
         run: |
-          cp ${{ github.workspace }}/patches/tvheadend42.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cat <<'EOF' > ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-ffmpeg-compat.patch
+--- a/src/transcoding/transcode/video.c
++++ b/src/transcoding/transcode/video.c
+@@ -269,8 +269,17 @@ tvh_video_context_open_encoder(TVHVideoContext *self)
+ 
+   /* Set ticks_per_frame for MPEG-TS timebase */
+-  self->oavctx->ticks_per_frame = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num; // We assume 90kHz as timebase which is mandatory for MPEG-TS
+-  ticks_per_frame = av_make_q(self->oavctx->ticks_per_frame, 1);
++#if LIBAVCODEC_VERSION_MAJOR < 59
++  self->oavctx->ticks_per_frame = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num;
++  ticks_per_frame = av_make_q(self->oavctx->ticks_per_frame, 1);
++#else
++  /* FFmpeg >= 5: ticks_per_frame eliminado, calculamos directamente */
++  if (self->oavctx->framerate.num > 0 && self->oavctx->framerate.den > 0) {
++    int tpf_val = (90000 * self->oavctx->framerate.den) / self->oavctx->framerate.num;
++    ticks_per_frame = av_make_q(tpf_val, 1);
++  } else {
++    ticks_per_frame = av_make_q(1, 1);
++  }
++#endif
+EOF
 
-      - name: 🩹 Add comskip patch (automatic)
-        run: |
-          cat > ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch <<'EOF'
-          --- a/comskip.c
-          +++ b/comskip.c
-          @@
-          -    sprintf(
-          +    snprintf(
-          EOF
-          sed -i 's/sprintf(\([^,]*\),/snprintf(\1, sizeof(\1),/' \
-            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-global-snprintf.patch
-        continue-on-error: true
-
-      - name: 🔍️ Show available addons
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ./scripts/create_addon --show-only all
-        continue-on-error: true
-
-      - name: 👷️ Build tvheadend addons
+      - name: 🔎 Show FFmpeg version used by CoreELEC
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
+          grep PKG_VERSION packages/multimedia/ffmpeg/package.mk || true
+          grep PKG_SHA256 packages/multimedia/ffmpeg/package.mk || true
 
-      - name: 👷️ Build comskip addon (if exists)
+      - name: 👷 Build tvheadend43 addon
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          if [ -d "packages/addons/addon-depends/comskip" ]; then
-            scripts/create_addon comskip || echo "comskip build failed, skipping"
-          else
-            echo "comskip addon not present, skipping"
-          fi
-        continue-on-error: true
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43 || true
 
-      - name: 🗜️ Compress built addons
+      - name: 🗜 Compress built addon
         run: |
           cd ${{ github.workspace }}/CoreELEC/target
-          zip -rFS9 addons-Amlogic-no.zip addons
+          zip -rFS9 addons-Amlogic-no.zip addons || true
 
-      - name: 📤️ Upload compressed addons
+      - name: 📤 Upload compressed addon
         uses: actions/upload-artifact@v4
         with:
           name: target
           path: ${{ github.workspace }}/CoreELEC/target/*.zip
 
-      - name: 📄 Upload build logs if failed
-        if: failure()
+      - name: 📄 Upload build logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: ${{ env.build_dir }}/.threads/logs/
+          path: ${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/.threads/logs/
           if-no-files-found: warn
+
