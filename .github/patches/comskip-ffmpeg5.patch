@@ -1,40 +1,45 @@
---- a/mpeg2dec.c
-+++ b/mpeg2dec.c
-@@ -1308,7 +1308,15 @@ video_packet_process(...)
- 
--           frame_delay = av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame ;
-+#if LIBAVCODEC_VERSION_MAJOR < 59
-+           frame_delay = av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame;
+--- a/comskip.c
++++ b/comskip.c
+@@ -1234,7 +1234,11 @@ static void video_packet_process(AVStream *st, ...)
+     if (st->avg_frame_rate.num && st->avg_frame_rate.den)
+         fps = av_q2d(st->avg_frame_rate);
+     else
+-        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
++#if LIBAVCODEC_VERSION_MAJOR >= 59
++        if (st->codecpar->framerate.num && st->codecpar->framerate.den)
++            fps = av_q2d(st->codecpar->framerate);
++        else
++            fps = 1.0 / av_q2d(st->time_base);
 +#else
-+           {
-+               int tpf_val = 1;
-+               if (is->dec_ctx->framerate.num > 0 && is->dec_ctx->framerate.den > 0) {
-+                   tpf_val = (90000 * is->dec_ctx->framerate.den) / is->dec_ctx->framerate.num;
-+               }
-+               frame_delay = av_q2d(is->dec_ctx->time_base) * tpf_val;
-+           }
++        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
 +#endif
  
-@@ -1891,7 +1899,11 @@ stream_component_open(...)
- 
--            is->dec_ctx->ticks_per_frame = 1;
+     /* resto de la función… */
+ }
+@@ -1891,7 +1895,11 @@ static int stream_component_open(AVFormatContext *ic, int stream_index)
+     codec = avcodec_find_decoder(avctx->codec_id);
+     if (!codec)
+         return -1;
+-    avctx->ticks_per_frame = st->codec->ticks_per_frame;
 +#if LIBAVCODEC_VERSION_MAJOR < 59
-+            is->dec_ctx->ticks_per_frame = 1;
++    avctx->ticks_per_frame = st->codec->ticks_per_frame;
++#endif
+     /* resto de la función… */
+ }
+@@ -2450,7 +2458,11 @@ static int file_open(const char *filename)
+     if (st->avg_frame_rate.num && st->avg_frame_rate.den)
+         fps = av_q2d(st->avg_frame_rate);
+     else
+-        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
++#if LIBAVCODEC_VERSION_MAJOR >= 59
++        if (st->codecpar->framerate.num && st->codecpar->framerate.den)
++            fps = av_q2d(st->codecpar->framerate);
++        else
++            fps = 1.0 / av_q2d(st->time_base);
 +#else
-+            /* FFmpeg >= 5: ticks_per_frame eliminado, no se asigna */
++        fps = 1.0 / (st->codec->ticks_per_frame * av_q2d(st->codec->time_base));
 +#endif
  
-@@ -2078,7 +2090,15 @@ file_open(...)
- 
--            is->fps = 1/(av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame );
-+#if LIBAVCODEC_VERSION_MAJOR < 59
-+            is->fps = 1/(av_q2d(is->dec_ctx->time_base) * is->dec_ctx->ticks_per_frame);
-+#else
-+            {
-+                int tpf_val = 1;
-+                if (is->dec_ctx->framerate.num > 0 && is->dec_ctx->framerate.den > 0) {
-+                    tpf_val = (90000 * is->dec_ctx->framerate.den) / is->dec_ctx->framerate.num;
-+                }
-+                is->fps = 1/(av_q2d(is->dec_ctx->time_base) * tpf_val);
-+            }
-+#endif
+     /* resto de la función… */
+ }
+
