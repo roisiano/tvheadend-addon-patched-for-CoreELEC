@@ -21,34 +21,37 @@ jobs:
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
 
-      - name: 🔍 Check sources availability (with variable expansion)
+      - name: 🔍 Check sources availability (full expansion)
         run: |
           MISSING=0
           echo "🔎 Comprobando fuentes necesarias..."
           for PKG in \
-            "CoreELEC/packages/multimedia/ffmpeg/package.mk:FFmpeg" \
-            "CoreELEC/packages/addons/service/tvheadend42/package.mk:tvheadend42" \
-            "CoreELEC/packages/addons/service/tvheadend43/package.mk:tvheadend43"
+            "packages/multimedia/ffmpeg/package.mk:FFmpeg" \
+            "packages/addons/service/tvheadend42/package.mk:tvheadend42" \
+            "packages/addons/service/tvheadend43/package.mk:tvheadend43"
           do
             FILE_PATH="${PKG%%:*}"
             NAME="${PKG##*:}"
 
-            # Cargar variables del package.mk en un subshell limpio
-            PKG_VERSION=""
-            PKG_URL=""
-            eval "$(grep -E '^PKG_VERSION=|^PKG_URL=' "$FILE_PATH" | sed 's/^/export /')"
-
-            # Expandir variables en la URL
-            URL=$(eval echo "$PKG_URL")
-            FILE=$(basename "$URL")
-
-            echo "➡ $NAME → $URL"
-            if [ -n "$URL" ] && curl --head --silent --fail "$URL" >/dev/null; then
-              echo "   ✅ Disponible online"
-            elif [ -f "${{ github.workspace }}/sources/$FILE" ]; then
-              echo "   ✅ Encontrado en sources locales"
-            else
-              echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
+            (
+              cd CoreELEC
+              # Cargar entorno de compilación
+              ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+              # Cargar el package.mk y cualquier include que tenga
+              source "$FILE_PATH"
+              URL=$(eval echo "$PKG_URL")
+              FILE=$(basename "$URL")
+              echo "➡ $NAME → $URL"
+              if [ -n "$URL" ] && curl --head --silent --fail "$URL" >/dev/null; then
+                echo "   ✅ Disponible online"
+              elif [ -f "${{ github.workspace }}/sources/$FILE" ]; then
+                echo "   ✅ Encontrado en sources locales"
+              else
+                echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
+                exit 99
+              fi
+            )
+            if [ "$?" -eq 99 ]; then
               MISSING=$((MISSING+1))
             fi
           done
