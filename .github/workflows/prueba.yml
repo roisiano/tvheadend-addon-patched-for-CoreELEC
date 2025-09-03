@@ -54,6 +54,49 @@ jobs:
           echo "build_dir=${BUILD}" >> $GITHUB_ENV
           echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
 
+      - name: 🧪️ Validar y enlazar sources
+        run: |
+          echo "🔍 Verificando sources manuales y oficiales..."
+          mkdir -p missing_sources
+
+          # Enlazar sources manuales si existen
+          if [ -d "${{ github.workspace }}/sources" ]; then
+            echo "✅ Sources manuales encontradas."
+            if [ ! -d "${{ env.sources_dir }}" ]; then
+              ln -s "${{ github.workspace }}/sources" "${{ env.sources_dir }}"
+              echo "🔗 Sources manuales enlazadas."
+            fi
+
+            # Detectar archivos no usados por CoreELEC
+            for file in "${{ github.workspace }}/sources"/*; do
+              fname=$(basename "$file")
+              if [ ! -f "${{ env.sources_dir }}/$fname" ]; then
+                echo "⚠️ Source no detectada por CoreELEC: $fname"
+                cp "$file" missing_sources/
+              fi
+            done
+          else
+            echo "❌ No se encontraron sources manuales."
+          fi
+
+          # Verificar sources esperadas por CoreELEC
+          for pkg in ffmpeg comskip libdvbcsa tvheadend42 tvheadend43; do
+            found=$(find "${{ env.sources_dir }}" -type f -iname "*${pkg}*" | wc -l)
+            if [ "$found" -eq 0 ]; then
+              echo "⚠️ Source esperada no encontrada: $pkg"
+              echo "$pkg" > missing_sources/${pkg}.txt
+            else
+              echo "✅ Source detectada: $pkg"
+            fi
+          done
+
+      - name: 📤️ Subir sources no detectadas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: missing-sources
+          path: missing_sources/
+
       - name: 🧱 Compile CoreELEC FFmpeg
         run: |
           cd ${{ github.workspace }}/CoreELEC
@@ -68,12 +111,6 @@ jobs:
             ${{ env.build_dir }}/.ccache-local
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
-
-      - name: 🤔️ Link sources if needed
-        run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
-          fi
 
       - name: 🧱 Ensure patch directories exist
         run: |
