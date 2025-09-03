@@ -1,5 +1,3 @@
-# .github/workflows/ci-build.yml
-
 name: GitHub Automatic Build
 
 on:
@@ -11,45 +9,57 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 🔌 Checkout repository
+      - name: 🔌️ Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🔨 Install dependencies
+      - name: 🔨️ Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            gcc g++ make git wget zip unzip xz-utils bc curl gperf \
-            xfonts-utils patchutils lzop \
-            libxml-parser-perl libparse-yapp-perl \
+            gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
+            xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless rsync rename jq rdfind
 
-      - name: 📥 Clone CoreELEC
+      - name: 📥️ Clone CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
-      - name: 📌 Checkout 22.0-Piers_alpha1 tag
+      - name: 📌️ Checkout coreelec-22 branch
         run: |
           cd CoreELEC
-          git fetch --all --tags
-          git checkout tags/22.0-Piers_alpha1
+          git fetch --all
+          git checkout coreelec-22
 
-      - name: ✍ Update libdvbcsa version manually
+      - name: 🧾 Downgrade Comskip to 0.82.009
+        run: |
+          sed -i 's|PKG_VERSION=".*"|PKG_VERSION="0.82.009"|' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/package.mk
+          sed -i 's|PKG_URL=".*"|PKG_URL="https://github.com/erikkaashoek/Comskip/archive/refs/tags/0.82.009.tar.gz"|' \
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/package.mk
+          sed -i '/^PKG_SHA256=/d' ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/package.mk
+
+      - name: ✍️ Update libdvbcsa version manually
         run: |
           sed -i 's|PKG_VERSION=".*"|PKG_VERSION="f25351d70589ec97ae6fb7590786c9aa38b999d4"|' \
-            CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
           sed -i 's|PKG_SHA256=".*"|PKG_SHA256="807998d0cf33fea4b716f534b9658aa02b185f50e5b143620d58f520b34ce0b7"|' \
-            CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
+            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
 
-      - name: 🔍 Get build paths
+      - name: 🔍️ Get build paths
         run: |
-          cd CoreELEC
+          cd ${{ github.workspace }}/CoreELEC
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
           echo "build_dir=${BUILD}" >> $GITHUB_ENV
           echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
 
-      - name: 💽 Cache build sources
+      - name: 🧱 Compile CoreELEC FFmpeg
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build ffmpeg
+
+      - name: 💽️ Cache build sources
         uses: actions/cache@v4
         with:
           path: |
@@ -59,7 +69,7 @@ jobs:
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔 Link sources if needed
+      - name: 🤔️ Link sources if needed
         run: |
           if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
@@ -67,57 +77,31 @@ jobs:
 
       - name: 🧱 Ensure patch directories exist
         run: |
-          mkdir -p CoreELEC/packages/addons/service/tvheadend42/patches
-          mkdir -p CoreELEC/packages/addons/service/tvheadend43/patches
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
 
-      - name: 😮 Add patches to tvheadend addons
+      - name: 😮️ Add patches to tvheadend addons
         run: |
-          cp patches/tvheadend42.patch \
-            CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp patches/tvheadend43-newer.patch \
-            CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/patches/tvheadend42.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
+          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: ⚙️ Patch comskip package.mk
+      - name: 👷️ Build tvheadend addons
         run: |
-          cd CoreELEC
-          cat << 'EOF' > comskip.patch
-          --- a/packages/addons/addon-depends/comskip/package.mk
-          +++ b/packages/addons/addon-depends/comskip/package.mk
-          @@
-           PKG_BUILD_FLAGS="-sysroot -cfg-libs"
-          +
-          +# disable warnings-as-errors for newer GCC
-          +PKG_CFLAGS_TARGET+=" -Wno-error=format-truncation -Wno-error=stringop-truncation -Wno-error=stringop-overflow"
-          +PKG_CXXFLAGS_TARGET+=" -Wno-error=format-truncation -Wno-error=stringop-truncation -Wno-error=stringop-overflow"
-          @@ pre_configure_target() {
-             LDFLAGS+=" -L$(get_install_dir ffmpegx)/usr/local/lib -ldl"
-          +
-          +  # robust replacement sprintf(buf, …) → snprintf(buf, sizeof(buf), …)
-          +  find "${PKG_BUILD}" -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) -print0 | \
-          +    xargs -0 sed -i -E 's/\bsprintf\(\s*([_A-Za-z][_A-Za-z0-9]*)\s*,/snprintf(\1, sizeof(\1),/g'
-          EOF
-          patch -p1 < comskip.patch
-
-      - name: 🔍 Show available addons
-        run: |
-          cd CoreELEC
-          ./scripts/create_addon --show-only all
-
-      - name: 👷 Build tvheadend addons
-        run: |
-          cd CoreELEC
+          cd ${{ github.workspace }}/CoreELEC
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
 
       - name: 🗜️ Compress built addons
         run: |
-          cd CoreELEC/target
+          cd ${{ github.workspace }}/CoreELEC/target
           zip -rFS9 addons-Amlogic-no.zip addons
 
-      - name: 📤 Upload compressed addons
+      - name: 📤️ Upload compressed addons
         uses: actions/upload-artifact@v4
         with:
           name: target
-          path: CoreELEC/target/*.zip
+          path: ${{ github.workspace }}/CoreELEC/target/*.zip
 
       - name: 📄 Upload build logs if failed
         if: failure()
@@ -126,5 +110,4 @@ jobs:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
           if-no-files-found: warn
-
 
