@@ -1,7 +1,7 @@
 name: GitHub Automatic Build
 
 on:
-  ##  push:
+  # push:
   workflow_dispatch:
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
         run: |
           patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
-       - name: 🔍️ Get path
+      - name: 🔍️ Get path
         run: |
           cd ${{ github.workspace }}/CoreELEC
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
