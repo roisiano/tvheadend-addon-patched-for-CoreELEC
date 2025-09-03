@@ -23,6 +23,3 @@ index 5f1f4b7..b8a1c2d 100644
 +    if (pFormatCtx->streams[i]->codec->ticks_per_frame > 1)
 +        fps /= pFormatCtx->streams[i]->codec->ticks_per_frame;
 +#endif
-
-     if (fps < 1.0)
-         fps = 25.0;
