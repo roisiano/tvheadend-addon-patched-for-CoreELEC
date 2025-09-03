@@ -66,7 +66,7 @@ jobs:
           cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
           cp ${{ github.workspace }}/patches/tvheadend43-100-ffmpeg-compat.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-101-LS.patch
 
       - name: 👷️ Building addon
         run: |
