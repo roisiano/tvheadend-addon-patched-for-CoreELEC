@@ -1,4 +1,4 @@
-name: Check Sources Availability
+name: Check All Sources Availability
 
 on:
   workflow_dispatch:
@@ -21,41 +21,66 @@ jobs:
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
 
-      - name: 🔍 Check sources availability
+      - name: 🔍 Check all sources recursively
         run: |
-          MISSING=0
-          echo "🔎 Comprobando fuentes necesarias..."
-          for PKG in \
-            "packages/multimedia/ffmpeg/package.mk:FFmpeg" \
-            "packages/addons/service/tvheadend43/package.mk:tvheadend43"
-          do
-            FILE_PATH="${PKG%%:*}"
-            NAME="${PKG##*:}"
+          set -e
+          cd CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
 
-            (
-              cd CoreELEC
-              ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
-              source "$FILE_PATH"
-              URL=$(eval echo "$PKG_URL")
-              FILE=$(basename "$URL")
-              echo "➡ $NAME → $URL"
-              if [ -n "$URL" ] && curl --head --silent --fail "$URL" >/dev/null; then
-                echo "   ✅ Disponible online"
-              elif [ -f "${{ github.workspace }}/sources/$FILE" ]; then
-                echo "   ✅ Encontrado en sources locales"
-              else
-                echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
-                exit 99
+          declare -A VISITED
+          QUEUE=("packages/multimedia/ffmpeg/package.mk" "packages/addons/service/tvheadend43/package.mk")
+
+          get_deps() {
+            local pkgfile="$1"
+            # Evitar duplicados
+            if [[ -n "${VISITED[$pkgfile]}" ]]; then
+              return
+            fi
+            VISITED[$pkgfile]=1
+
+            # Cargar package.mk
+            source "$pkgfile" || true
+
+            # Añadir dependencias
+            for dep in $PKG_DEPENDS_TARGET; do
+              depfile=$(find packages -type f -path "*/$dep/package.mk" | head -n1 || true)
+              if [[ -n "$depfile" ]]; then
+                QUEUE+=("$depfile")
               fi
-            )
-            if [ "$?" -eq 99 ]; then
-              MISSING=$((MISSING+1))
+            done
+          }
+
+          # Construir lista completa de paquetes
+          i=0
+          while [[ $i -lt ${#QUEUE[@]} ]]; do
+            get_deps "${QUEUE[$i]}"
+            ((i++))
+          done
+
+          echo "📦 Paquetes a comprobar:"
+          printf '%s\n' "${!VISITED[@]}"
+
+          MISSING=0
+          for pkgfile in "${!VISITED[@]}"; do
+            source "$pkgfile" || true
+            URL=$(eval echo "$PKG_URL")
+            FILE=$(basename "$URL")
+            NAME=$(basename "$(dirname "$pkgfile")")
+            echo "➡ $NAME → $URL"
+            if [[ -n "$URL" ]] && curl --head --silent --fail "$URL" >/dev/null; then
+              echo "   ✅ Disponible online"
+            elif [[ -f "${{ github.workspace }}/sources/$FILE" ]]; then
+              echo "   ✅ Encontrado en sources locales"
+            else
+              echo "   ❌ NO disponible → Paquete: $NAME | URL: $URL"
+              ((MISSING++))
             fi
           done
 
-          if [ "$MISSING" -gt 0 ]; then
+          if [[ $MISSING -gt 0 ]]; then
             echo "❌ $MISSING paquete(s) con fuentes no disponibles"
             exit 1
           else
             echo "🎉 Todo OK: todas las fuentes están disponibles"
           fi
+
