@@ -54,7 +54,7 @@ jobs:
           echo "build_dir=${BUILD}" >> $GITHUB_ENV
           echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
 
-      - name: 🧪️ Validar y enlazar sources
+      - name: 🧪️ Validar y enlazar sources (recursivo)
         run: |
           echo "🔍 Verificando sources manuales y oficiales..."
           mkdir -p missing_sources
@@ -67,12 +67,12 @@ jobs:
               echo "🔗 Sources manuales enlazadas."
             fi
 
-            # Detectar archivos no usados por CoreELEC
-            for file in "${{ github.workspace }}/sources"/*; do
-              fname=$(basename "$file")
-              if [ ! -f "${{ env.sources_dir }}/$fname" ]; then
+            # Detectar subcarpetas no reconocidas por CoreELEC
+            for dir in "${{ github.workspace }}/sources"/*; do
+              fname=$(basename "$dir")
+              if [ ! -e "${{ env.sources_dir }}/$fname" ]; then
                 echo "⚠️ Source no detectada por CoreELEC: $fname"
-                cp "$file" missing_sources/
+                cp -r "$dir" missing_sources/
               fi
             done
           else
@@ -81,7 +81,7 @@ jobs:
 
           # Verificar sources esperadas por CoreELEC
           for pkg in ffmpeg comskip libdvbcsa tvheadend42 tvheadend43; do
-            found=$(find "${{ env.sources_dir }}" -type f -iname "*${pkg}*" | wc -l)
+            found=$(find "${{ env.sources_dir }}" -type d -iname "*${pkg}*" | wc -l)
             if [ "$found" -eq 0 ]; then
               echo "⚠️ Source esperada no encontrada: $pkg"
               echo "$pkg" > missing_sources/${pkg}.txt
