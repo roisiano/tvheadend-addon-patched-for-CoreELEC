@@ -21,13 +21,12 @@ jobs:
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
 
-      - name: 🔍 Check sources availability (full expansion)
+      - name: 🔍 Check sources availability
         run: |
           MISSING=0
           echo "🔎 Comprobando fuentes necesarias..."
           for PKG in \
             "packages/multimedia/ffmpeg/package.mk:FFmpeg" \
-            "packages/addons/service/tvheadend42/package.mk:tvheadend42" \
             "packages/addons/service/tvheadend43/package.mk:tvheadend43"
           do
             FILE_PATH="${PKG%%:*}"
@@ -35,9 +34,7 @@ jobs:
 
             (
               cd CoreELEC
-              # Cargar entorno de compilación
               ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
-              # Cargar el package.mk y cualquier include que tenga
               source "$FILE_PATH"
               URL=$(eval echo "$PKG_URL")
               FILE=$(basename "$URL")
