@@ -14,27 +14,21 @@ jobs:
         run: |
           set -e
           sudo apt-get update && sudo apt-get install -y build-essential pkg-config \
-              libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake git
-          
+              libavcodec-dev libavformat-dev libavutil-dev wget autoconf automake
+
           # Descargar código fuente de Comskip
           wget https://codeload.github.com/erikkaashoek/Comskip/tar.gz/refs/tags/V0.83 -O comskip-0.83.tar.gz
           mkdir comskip-src && tar --strip=1 -xzf comskip-0.83.tar.gz -C comskip-src
           cd comskip-src
-          
-          # Copiar parche desde el repo actual
-          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch .
-          
-          # Inicializar git para que git apply funcione
-          git init >/dev/null 2>&1
-          git config user.name "dummy"
-          git config user.email "dummy@example.com"
-          
+
+          # Aplicar parche en formato clásico
           echo "Aplicando parche..."
-          git apply --ignore-space-change --ignore-whitespace comskip-ffmpeg5.patch
-          
+          patch -p1 < ../.github/patches/comskip-ffmpeg5.patch
+
           echo "Compilando..."
           ./configure
           make -j"$(nproc)"
-          
+
           echo "Prueba de ejecución..."
           ./comskip --help
+
