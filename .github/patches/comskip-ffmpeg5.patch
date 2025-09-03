@@ -60,4 +60,3 @@ index 4a2b3c1..d7e8f9a 100644
  
 -    av_free_packet(&pkt);
 +    av_packet_unref(&pkt);
-
