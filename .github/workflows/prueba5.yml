@@ -25,28 +25,29 @@ jobs:
           cd CoreELEC
           git checkout coreelec-22
 
+      - name: 🔍 Verificar clonado
+        run: ls -l CoreELEC
+
       - name: 📌 Apply libdvbcsa patch
         run: |
           mkdir -p CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/patches/up-libdvbcsa.patch \
+          cp patches/up-libdvbcsa.patch \
              CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/001-up-libdvbcsa.patch
-
-      - name: 🧱 Ensure tvheadend patch directory exists
-        run: mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
 
       - name: 😮 Add tvheadend patch
         run: |
-          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          mkdir -p CoreELEC/packages/addons/service/tvheadend43/patches
+          cp patches/tvheadend43-newer.patch \
+             CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
       - name: 🛠️ Build libdvbcsa
+        working-directory: CoreELEC
         run: |
-          cd CoreELEC
           DEVICE=Amlogic-no scripts/build libdvbcsa > ../build-libdvbcsa.log 2>&1
 
       - name: 🧱 Create tvheadend43 addon
+        working-directory: CoreELEC
         run: |
-          cd CoreELEC
           DEVICE=Amlogic-no scripts/create_addon tvheadend43 > ../build-addon.log 2>&1
 
       - name: 📤 Upload build logs
@@ -57,19 +58,20 @@ jobs:
             build-libdvbcsa.log
             build-addon.log
 
-      - name: 📦 Upload addon zip if generated
+      - name: 📦 Buscar addon generado
         run: |
           ADDON_ZIP=$(find CoreELEC -name "service.tvheadend43-*.zip" | head -n 1)
           if [ -f "$ADDON_ZIP" ]; then
-            echo "Addon found: $ADDON_ZIP"
+            echo "Addon encontrado: $ADDON_ZIP"
             cp "$ADDON_ZIP" tvheadend43-patched.zip
           else
-            echo "Addon zip not found"
+            echo "❌ No se encontró el addon zip"
             exit 1
           fi
 
-      - name: 📤 Upload patched addon
+      - name: 📤 Subir addon parcheado
         uses: actions/upload-artifact@v4
         with:
           name: tvheadend43-patched
           path: tvheadend43-patched.zip
+
