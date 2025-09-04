@@ -1,6 +1,7 @@
 name: GitHub Automatic Build
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -11,41 +12,29 @@ jobs:
     steps:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: 🔨️ Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
-            xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-            openjdk-11-jre-headless rsync rename jq rdfind
+          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
 
-      - name: 📥️ Clone CoreELEC
+      - name: 📥️ Download CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
 
       - name: 📌️ Checkout coreelec-22 branch
-        run: |
-          cd CoreELEC
-          git fetch --all
-          git checkout coreelec-22
+        working-directory: CoreELEC
+        run: git checkout coreelec-22
 
-      - name: 🛠️ Patch comskip to avoid format-overflow errors
+      - name: 😜️ Apply dvbcsa patch
         run: |
-          sed -i '/^PKG_BUILD_FLAGS=/a PKG_CFLAGS_TARGET="-Wno-error=format-overflow"' \
-            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/package.mk
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch || {
+            echo "❌ Error aplicando el parche dvbcsa"
+            exit 1
+          }
 
-      - name: ✍️ Update libdvbcsa version manually
+      - name: 🔍️ Extract build paths
+        working-directory: CoreELEC
         run: |
-          sed -i 's|PKG_VERSION=".*"|PKG_VERSION="f25351d70589ec97ae6fb7590786c9aa38b999d4"|' \
-            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
-          sed -i 's|PKG_SHA256=".*"|PKG_SHA256="807998d0cf33fea4b716f534b9658aa02b185f50e5b143620d58f520b34ce0b7"|' \
-            ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/package.mk
-
-      - name: 🔍️ Get build paths
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
           echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
           echo "build_dir=${BUILD}" >> $GITHUB_ENV
@@ -61,44 +50,43 @@ jobs:
           key: ${{ env.project }}-Amlogic-no
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔️ Link sources if needed
+      - name: 🤔️ Add fallback sources if needed
         run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
-      - name: 🧱 Ensure patch directories exist
+      - name: 😮️ Add tvheadend patch
         run: |
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
-
-      - name: 😮️ Add patches to tvheadend addons
-        run: |
-          cp ${{ github.workspace }}/patches/tvheadend42.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Build tvheadend addons
+      - name: 👷️ Build tvheadend addon
+        working-directory: CoreELEC
         run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend42 tvheadend43
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
 
-      - name: 🗜️ Compress built addons
+      - name: ✅ Verify addon output
         run: |
-          cd ${{ github.workspace }}/CoreELEC/target
-          zip -rFS9 addons-Amlogic-no.zip addons
+          ls -l ${{ github.workspace }}/CoreELEC/target/addons/service.tvheadend43* || {
+            echo "❌ El addon tvheadend43 no se generó correctamente"
+            exit 1
+          }
 
-      - name: 📤️ Upload compressed addons
+      - name: 🗜️ Compress addon
+        working-directory: CoreELEC/target
+        run: zip -rFS9 addons-Amlogic-no.zip addons/service.tvheadend43*
+
+      - name: 📤️ Upload addon zip
         uses: actions/upload-artifact@v4
         with:
           name: target
-          path: ${{ github.workspace }}/CoreELEC/target/*.zip
+          path: CoreELEC/target/addons-Amlogic-no.zip
 
-      - name: 📄 Upload build logs if failed
-        if: failure()
+      - name: 📄 Upload build logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: ${{ env.build_dir }}/.threads/logs/
+          path: CoreELEC/build.*/.threads/logs/
           if-no-files-found: warn
