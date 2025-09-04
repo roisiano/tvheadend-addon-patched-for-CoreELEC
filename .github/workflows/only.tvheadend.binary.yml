@@ -1,67 +1,67 @@
-name: Build Patched TVH43 Addon
+name: Build Patched Tvheadend43
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-tvheadend43:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: 🔌 Checkout repo
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: 🔌 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: 📥 Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential pkg-config git \
-          libavcodec-dev libavformat-dev libavutil-dev libssl-dev \
-          bzip2 wget autoconf automake libtool patch dos2unix unzip zip
+      - name: 📥 Download official Tvheadend43 addon
+        run: |
+          wget https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip -O tvh-official.zip
+          unzip tvh-official.zip -d tvh-official
 
-    - name: 📥 Download official addon
-      run: |
-        wget https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip -O addon-official.zip
-        unzip addon-official.zip -d addon-work
+      - name: 📥 Prepare build sources
+        run: |
+          # Descarga las fuentes de Tvheadend (tarball oficial)
+          wget https://github.com/tvheadend/tvheadend/archive/f1c460feb.tar.gz -O tvh-src.tar.gz
+          mkdir tvh-src && tar --strip=1 -xzf tvh-src.tar.gz -C tvh-src
 
-    - name: 📥 Clone Tvheadend sources
-      run: |
-        git clone https://github.com/tvheadend/tvheadend.git tvh-src
-        cd tvh-src
-        git fetch --depth=1 origin f1c460feb
-        git checkout f1c460feb
+          # Copiar los parches
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch tvh-src/
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch tvh-src/
 
-    - name: ✍️ Apply patches
-      run: |
-        cd tvh-src
-        dos2unix ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
-        patch -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
-        dos2unix ${{ github.workspace }}/.github/patches/tvheadend43-new.patch
-        patch -p1 < ${{ github.workspace }}/.github/patches/tvheadend43-new.patch
+      - name: 🧩 Apply patches
+        run: |
+          cd tvh-src
+          git init
+          git config user.name "CI"
+          git config user.email "ci@example.com"
+          git add .
+          git commit -m "initial commit"
+          git apply tvheadend43-new.patch
+          git apply up-libdvbcsa.patch
 
-    - name: 🔨 Build tvheadend
-      run: |
-        cd tvh-src
-        ./configure --prefix=/usr --enable-libav
-        make -j"$(nproc)" | tee build.log
-        mkdir -p ../build-logs
-        cp build.log ../build-logs/tvheadend-build.log || true
+      - name: 🛠️ Build Tvheadend
+        run: |
+          cd tvh-src
+          ./configure --prefix=/usr --enable-avahi --enable-dvbcsa
+          make -j"$(nproc)"
 
-    - name: 🔄 Replace binary in addon
-      run: |
-        cp tvh-src/build.linux/tvheadend addon-work/service.tvheadend43/bin/tvheadend
+      - name: 📂 Copy patched binary to addon
+        run: |
+          mkdir -p tvh-official/service.tvheadend43/bin
+          cp tvh-src/tvheadend tvh-official/service.tvheadend43/bin/
+          # mantener todo lo demás (comskip, dvb-scan) intacto
 
-    - name: 📦 Repack addon
-      run: |
-        cd addon-work
-        zip -r ../service.tvheadend43-22.0.4.3-patched.zip *
+      - name: 📝 List final files
+        run: |
+          tree tvh-official
 
-    - name: ⬆️ Upload addon artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: service.tvheadend43-22.0.4.3-patched
-        path: service.tvheadend43-22.0.4.3-patched.zip
+      - name: 📦 Zip patched addon
+        run: |
+          zip -r tvheadend43-patched.zip tvh-official/service.tvheadend43
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvheadend43-patched
+          path: tvheadend43-patched.zip
 
     - name: ⬆️ Upload build logs
       uses: actions/upload-artifact@v4
