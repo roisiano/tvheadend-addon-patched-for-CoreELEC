@@ -1,4 +1,4 @@
-name: Injerto TVH parcheado (solo binario tvheadend, coreelec-22)
+name: Injerto TVH parcheado (solo binario tvheadend, coreelec-22 con caché)
 
 on:
   workflow_dispatch:
@@ -40,6 +40,14 @@ jobs:
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 💾 Cachear build CoreELEC
+        uses: actions/cache@v4
+        with:
+          path: CoreELEC/build.*
+          key: coreelec22-${{ runner.os }}-${{ hashFiles('.github/patches/*.patch') }}
+          restore-keys: |
+            coreelec22-${{ runner.os }}-
 
       - name: 🔍 Obtener rutas build
         run: |
