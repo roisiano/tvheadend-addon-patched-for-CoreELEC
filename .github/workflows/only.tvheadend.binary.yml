@@ -18,11 +18,8 @@ jobs:
 
       - name: 📥 Prepare build sources
         run: |
-          # Descarga las fuentes de Tvheadend (tarball oficial)
           wget https://github.com/tvheadend/tvheadend/archive/f1c460feb.tar.gz -O tvh-src.tar.gz
           mkdir tvh-src && tar --strip=1 -xzf tvh-src.tar.gz -C tvh-src
-
-          # Copiar los parches
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch tvh-src/
           cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch tvh-src/
 
@@ -37,37 +34,37 @@ jobs:
           git apply tvheadend43-new.patch
           git apply up-libdvbcsa.patch
 
-      - name: 🛠️ Build Tvheadend
+      - name: 🛠️ Build Tvheadend with logs
         run: |
+          mkdir -p build-logs
           cd tvh-src
-          ./configure --prefix=/usr --enable-avahi --enable-dvbcsa
-          make -j"$(nproc)"
+          ./configure --prefix=/usr --enable-avahi --enable-dvbcsa > ../build-logs/configure.log 2>&1
+          make -j"$(nproc)" > ../build-logs/make.log 2>&1
 
       - name: 📂 Copy patched binary to addon
         run: |
           mkdir -p tvh-official/service.tvheadend43/bin
           cp tvh-src/tvheadend tvh-official/service.tvheadend43/bin/
-          # mantener todo lo demás (comskip, dvb-scan) intacto
 
       - name: 📝 List final files
         run: |
-          tree tvh-official
+          tree tvh-official > build-logs/final-tree.log
 
       - name: 📦 Zip patched addon
         run: |
           zip -r tvheadend43-patched.zip tvh-official/service.tvheadend43
 
-      - name: 📤 Upload artifact
+      - name: 📤 Upload patched addon
         uses: actions/upload-artifact@v4
         with:
           name: tvheadend43-patched
           path: tvheadend43-patched.zip
 
-    - name: ⬆️ Upload build logs
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: build-logs
+      - name: ⬆️ Upload build logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build-logs
 
 
 
