@@ -1,4 +1,4 @@
-name: TVH parcheado rápido (CoreELEC cacheado)
+name: Build Patched TVH43 Addon
 
 on:
   workflow_dispatch:
@@ -8,77 +8,66 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
+    - name: 🔌 Checkout repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: 🔨 Instalar dependencias CoreELEC
-        run: |
-          sudo apt-get update && sudo apt-get install -y \
-            gcc g++ make git wget unzip zip patchutils rsync pkg-config autoconf automake libtool \
-            xfonts-utils rdfind libparse-yapp-perl gperf xsltproc libxml-parser-perl lzop
+    - name: 📥 Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config git \
+          libavcodec-dev libavformat-dev libavutil-dev libssl-dev \
+          bzip2 wget autoconf automake libtool patch dos2unix unzip zip
 
-      - name: 💾 Cache CoreELEC build y sources
-        uses: actions/cache@v4
-        with:
-          path: |
-            CoreELEC/build.*
-            CoreELEC/sources
-          key: coreelec22-${{ runner.os }}-${{ hashFiles('.github/patches/*.patch') }}
-          restore-keys: |
-            coreelec22-${{ runner.os }}-
+    - name: 📥 Download official addon
+      run: |
+        wget https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip -O addon-official.zip
+        unzip addon-official.zip -d addon-work
 
-      - name: 📂 Clonar CoreELEC si no existe
-        run: |
-          if [ ! -d CoreELEC ]; then
-            git clone https://github.com/CoreELEC/CoreELEC
-            cd CoreELEC
-            git checkout coreelec-22
-          fi
+    - name: 📥 Clone Tvheadend sources
+      run: |
+        git clone https://github.com/tvheadend/tvheadend.git tvh-src
+        cd tvh-src
+        git fetch --depth=1 origin f1c460feb
+        git checkout f1c460feb
 
-      - name: 🛠 Preparar toolchain si no existe
-        run: |
-          cd CoreELEC
-          if [ ! -d build.* ]; then
-            ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make image
-          fi
+    - name: ✍️ Apply patches
+      run: |
+        cd tvh-src
+        dos2unix ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
+        patch -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
+        dos2unix ${{ github.workspace }}/.github/patches/tvheadend43-new.patch
+        patch -p1 < ${{ github.workspace }}/.github/patches/tvheadend43-new.patch
 
-      - name: 📌 Aplicar parches
-        run: |
-          cd CoreELEC
-          patch -p1 < ../.github/patches/up-libdvbcsa.patch
-          mkdir -p packages/addons/service/tvheadend43/patches
-          cp ../.github/patches/tvheadend43-new.patch \
-             packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+    - name: 🔨 Build tvheadend
+      run: |
+        cd tvh-src
+        ./configure --prefix=/usr --enable-libav
+        make -j"$(nproc)" | tee build.log
+        mkdir -p ../build-logs
+        cp build.log ../build-logs/tvheadend-build.log || true
 
-      - name: 🔄 Recompilar solo libdvbcsa y tvheadend43
-        run: |
-          cd CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build libdvbcsa
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build tvheadend43
+    - name: 🔄 Replace binary in addon
+      run: |
+        cp tvh-src/build.linux/tvheadend addon-work/service.tvheadend43/bin/tvheadend
 
-      - name: 📥 Descargar addon oficial
-        run: |
-          mkdir official
-          wget -O official/addon.zip \
-            https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip
-          unzip official/addon.zip -d official/addon
+    - name: 📦 Repack addon
+      run: |
+        cd addon-work
+        zip -r ../service.tvheadend43-22.0.4.3-patched.zip *
 
-      - name: 📦 Sustituir binario
-        run: |
-          cp CoreELEC/build.*/tvheadend43-*/.install_pkg/usr/bin/tvheadend \
-             official/addon/bin/tvheadend
+    - name: ⬆️ Upload addon artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: service.tvheadend43-22.0.4.3-patched
+        path: service.tvheadend43-22.0.4.3-patched.zip
 
-      - name: 🗜 Reempaquetar addon
-        run: |
-          cd official/addon
-          zip -rFS9 ../../service.tvheadend43-22.0.4.3-icam.zip *
-
-      - name: 📤 Subir artefacto
-        uses: actions/upload-artifact@v4
-        with:
-          name: tvheadend43-icam
-          path: service.tvheadend43-22.0.4.3-icam.zip
-
+    - name: ⬆️ Upload build logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: build-logs
 
 
 
