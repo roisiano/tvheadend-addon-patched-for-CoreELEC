@@ -1,0 +1,75 @@
+name: Build Patched Tvheadend43 (CoreELEC)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-addon:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 🔌 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc g++ make git wget unzip zip patchutils rsync pkg-config autoconf automake libtool \
+            xfonts-utils rdfind libparse-yapp-perl gperf xsltproc libxml-parser-perl lzop \
+            python3 bison flex gettext cmake gawk texinfo
+
+      - name: 📥 Clone CoreELEC
+        run: |
+          git clone https://github.com/CoreELEC/CoreELEC.git
+          cd CoreELEC
+          git checkout coreelec-22
+
+      - name: 📌 Apply libdvbcsa patch
+        run: |
+          mkdir -p CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
+          cp ${{ github.workspace }}/patches/up-libdvbcsa.patch \
+             CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/001-up-libdvbcsa.patch
+
+      - name: 🧱 Ensure tvheadend patch directory exists
+        run: mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
+
+      - name: 😮 Add tvheadend patch
+        run: |
+          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 🛠️ Build libdvbcsa
+        run: |
+          cd CoreELEC
+          DEVICE=Amlogic-no scripts/build libdvbcsa > ../build-libdvbcsa.log 2>&1
+
+      - name: 🧱 Create tvheadend43 addon
+        run: |
+          cd CoreELEC
+          DEVICE=Amlogic-no scripts/create_addon tvheadend43 > ../build-addon.log 2>&1
+
+      - name: 📤 Upload build logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build-libdvbcsa.log
+            build-addon.log
+
+      - name: 📦 Upload addon zip if generated
+        run: |
+          ADDON_ZIP=$(find CoreELEC -name "service.tvheadend43-*.zip" | head -n 1)
+          if [ -f "$ADDON_ZIP" ]; then
+            echo "Addon found: $ADDON_ZIP"
+            cp "$ADDON_ZIP" tvheadend43-patched.zip
+          else
+            echo "Addon zip not found"
+            exit 1
+          fi
+
+      - name: 📤 Upload patched addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvheadend43-patched
+          path: tvheadend43-patched.zip
