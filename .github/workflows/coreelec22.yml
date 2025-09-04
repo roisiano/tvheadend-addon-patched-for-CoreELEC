@@ -85,8 +85,23 @@ jobs:
 
       - name: 📄 Upload build logs
         if: always()
+        run: |
+          echo "🔍 Buscando logs en directorios de build..."
+          LOG_DIR=$(find CoreELEC -type d -path "*/.threads/logs" | head -n 1)
+          if [ -n "$LOG_DIR" ]; then
+            echo "✅ Logs encontrados en: $LOG_DIR"
+            mkdir -p logs-to-upload
+            cp -r "$LOG_DIR"/* logs-to-upload/
+          else
+            echo "⚠️ No se encontraron logs en ningún directorio .threads/logs"
+          fi
+        continue-on-error: true
+
+      - name: 📤️ Upload logs artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: CoreELEC/build.*/.threads/logs/
+          path: logs-to-upload/
           if-no-files-found: warn
+
