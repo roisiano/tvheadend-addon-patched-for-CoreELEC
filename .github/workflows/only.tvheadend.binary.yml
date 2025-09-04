@@ -11,11 +11,13 @@ jobs:
       - name: 🔌 Checkout repository
         uses: actions/checkout@v4
 
+      # 1️⃣ Descargar addon oficial
       - name: 📥 Download official Tvheadend43 addon
         run: |
           wget https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip -O tvh-official.zip
           unzip tvh-official.zip -d tvh-official
 
+      # 2️⃣ Descargar y preparar fuentes de Tvheadend
       - name: 📥 Prepare build sources
         run: |
           wget https://github.com/tvheadend/tvheadend/archive/f1c460feb.tar.gz -O tvh-src.tar.gz
@@ -23,6 +25,7 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch tvh-src/
           cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch tvh-src/
 
+      # 3️⃣ Aplicar parches
       - name: 🧩 Apply patches
         run: |
           cd tvh-src
@@ -31,29 +34,29 @@ jobs:
           git config user.email "ci@example.com"
           git add .
           git commit -m "initial commit"
-          git apply tvheadend43-new.patch
-          git apply up-libdvbcsa.patch
+          patch -p1 < tvheadend43-new.patch
+          patch -p1 < up-libdvbcsa.patch
 
-      - name: 🛠️ Build Tvheadend with logs
+      # 4️⃣ Compilar solo tvheadend
+      - name: 🛠️ Build Tvheadend
         run: |
-          mkdir -p build-logs
           cd tvh-src
-          ./configure --prefix=/usr --enable-avahi --enable-dvbcsa > ../build-logs/configure.log 2>&1
-          make -j"$(nproc)" > ../build-logs/make.log 2>&1
+          ./configure --prefix=/usr --enable-avahi --enable-dvbcsa
+          make -j"$(nproc)" tvheadend
 
-      - name: 📂 Copy patched binary to addon
+      # 5️⃣ Sustituir binario en el addon oficial
+      - name: 📂 Replace tvheadend binary in addon
         run: |
-          mkdir -p tvh-official/service.tvheadend43/bin
-          cp tvh-src/tvheadend tvh-official/service.tvheadend43/bin/
+          cp tvh-src/tvheadend tvh-official/service.tvheadend43/bin/tvheadend
+          chmod +x tvh-official/service.tvheadend43/bin/tvheadend
 
-      - name: 📝 List final files
-        run: |
-          tree tvh-official > build-logs/final-tree.log
-
+      # 6️⃣ Empaquetar addon parcheado
       - name: 📦 Zip patched addon
         run: |
-          zip -r tvheadend43-patched.zip tvh-official/service.tvheadend43
+          cd tvh-official
+          zip -r ../tvheadend43-patched.zip service.tvheadend43
 
+      # 7️⃣ Subir artefacto final
       - name: 📤 Upload patched addon
         uses: actions/upload-artifact@v4
         with:
