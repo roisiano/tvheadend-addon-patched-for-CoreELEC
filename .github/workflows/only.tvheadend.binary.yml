@@ -1,4 +1,4 @@
-name: Injerto TVH parcheado (solo binario tvheadend, toolchain coreelec-22)
+name: Injerto TVH parcheado (solo binario tvheadend, coreelec-22)
 
 on:
   workflow_dispatch:
@@ -41,11 +41,6 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: ⚙️ Generar toolchain coreelec-22
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make toolchain
-
       - name: 🔍 Obtener rutas build
         run: |
           cd ${{ github.workspace }}/CoreELEC
@@ -62,7 +57,7 @@ jobs:
       - name: 👷 Compilar SOLO paquete tvheadend
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make package-tvheadend
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make -j$(nproc) package-tvheadend
 
       - name: 🔄 Sustituir binario en addon oficial
         run: |
@@ -79,5 +74,6 @@ jobs:
         with:
           name: tvheadend43-icam
           path: service.tvheadend43-22.0.4.3-icam.zip
+
 
 
