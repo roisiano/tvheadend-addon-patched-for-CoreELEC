@@ -1,0 +1,12 @@
+# Channel table for SES 3 at 103.0°W
+# Source: http://www.lyngsat.com/SES-3.html
+
+[NTA International]
+	DELIVERY_SYSTEM = DVBS2
+	FREQUENCY = 12080000
+	POLARIZATION = HORIZONTAL
+	SYMBOL_RATE = 29970000
+	MODULATION = PSK/8
+	INNER_FEC = AUTO
+	INVERSION = AUTO
+

@@ -1,0 +1,11 @@
+# Channel table for Amazonas at 36.2W
+# Source: http://en.kingofsat.net/sat-amazonas.php
+
+[CHANNEL]
+	DELIVERY_SYSTEM = DVBS
+	FREQUENCY = 12509000
+	POLARIZATION = VERTICAL
+	SYMBOL_RATE = 6666000
+	INNER_FEC = 7/8
+	INVERSION = AUTO
+

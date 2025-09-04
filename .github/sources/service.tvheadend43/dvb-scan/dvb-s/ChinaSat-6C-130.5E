@@ -1,0 +1,11 @@
+# Channel table for ChinaSat 6C at 130.5°E
+# Source: http://www.lyngsat.com/ChinaSat-6C.html
+
+[CCTV]
+	DELIVERY_SYSTEM = DVBS
+	FREQUENCY = 3860000
+	POLARIZATION = VERTICAL
+	SYMBOL_RATE = 26600000
+	INNER_FEC = AUTO
+	INVERSION = AUTO
+
