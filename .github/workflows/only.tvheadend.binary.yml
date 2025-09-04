@@ -1,4 +1,4 @@
-name: Injerto TVH parcheado (solo binario tvheadend, toolchain rápida)
+name: Injerto TVH parcheado (solo binario tvheadend, toolchain coreelec-22)
 
 on:
   workflow_dispatch:
@@ -14,13 +14,7 @@ jobs:
       - name: 🔨 Instalar deps mínimas
         run: |
           sudo apt-get update && sudo apt-get install -y \
-          gcc g++ make git wget unzip zip patchutils rsync pkg-config
-
-      - name: 📥 Descargar toolchain CoreELEC precompilada
-        run: |
-          wget https://github.com/CoreELEC/CoreELEC/releases/download/21.0-Omega/toolchain-aarch64-g12.tar.xz
-          tar -xf toolchain-aarch64-g12.tar.xz
-          echo "$PWD/toolchain/bin" >> $GITHUB_PATH
+          gcc g++ make git wget unzip zip patchutils rsync pkg-config autoconf automake libtool
 
       - name: 📥 Descargar addon oficial
         run: |
@@ -29,29 +23,50 @@ jobs:
             https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip
           unzip official/addon.zip -d official/addon
 
-      - name: 📥 Clonar fuente tvheadend
+      - name: 📥 Clonar CoreELEC (coreelec-22 alpha-piers)
         run: |
-          git clone --branch release/4.3 https://github.com/tvheadend/tvheadend.git
+          git clone https://github.com/CoreELEC/CoreELEC
+          cd CoreELEC
+          git fetch --all
+          git checkout coreelec-22
 
       - name: 😜 Aplicar parche libdvbcsa
         run: |
-          patch -d ${{ github.workspace }}/tvheadend -p1 \
+          patch -d ${{ github.workspace }}/CoreELEC -p1 \
             < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
-      - name: 📁 Aplicar parche tvheadend ICAM
+      - name: 📁 Añadir parche tvheadend
         run: |
-          patch -d ${{ github.workspace }}/tvheadend -p1 \
-            < ${{ github.workspace }}/.github/patches/tvheadend43-new.patch
+          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷 Compilar tvheadend con toolchain
+      - name: ⚙️ Generar toolchain coreelec-22
         run: |
-          cd tvheadend
-          ./configure --arch=arm64 --platform=linux --disable-avahi --disable-ffmpeg_static
-          make -j$(nproc)
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make toolchain
+
+      - name: 🔍 Obtener rutas build
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
+          echo "build_dir=${BUILD}" >> $GITHUB_ENV
+
+      - name: 🤔 Añadir sources manualmente si hace falta
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 👷 Compilar SOLO paquete tvheadend
+        run: |
+          cd ${{ github.workspace }}/CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no make package-tvheadend
 
       - name: 🔄 Sustituir binario en addon oficial
         run: |
-          cp tvheadend/build.linux/tvheadend \
+          cp ${{ env.build_dir }}/tvheadend-*/.install_pkg/usr/bin/tvheadend \
              official/addon/bin/tvheadend
 
       - name: 🗜 Reempaquetar addon final
