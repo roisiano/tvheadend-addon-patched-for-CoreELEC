@@ -1,69 +1,67 @@
-name: GitHub Automatic Build
+name: Build Patched Tvheadend43 (ICAM)
 
 on:
-##  push:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: coreelec-22-Amlogic-no
+  build-addon:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 🔌️ Checkout
+      - name: 🔌 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🔨️ Install dependencies
+      - name: 🔧 Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
+          sudo apt-get install -y \
+            gcc g++ make git wget unzip zip patchutils autoconf automake libtool \
+            pkg-config cmake bison flex gettext python3
 
-      - name: 📥️ Download CoreELEC
-        run: git clone https://github.com/CoreELEC/CoreELEC
-
-      - name: 📌️ Checkout coreelec-22 branch
-        working-directory: CoreELEC
-        run: git checkout coreelec-22
-
-      - name: 📌 Apply libdvbcsa patch
+      - name: 📥 Download Tvheadend source
         run: |
-          mkdir -p CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch \
-             CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/001-up-libdvbcsa.patch
+          wget https://github.com/tvheadend/tvheadend/archive/f1c460feb.tar.gz -O tvh-src.tar.gz
+          mkdir tvh-src && tar --strip=1 -xzf tvh-src.tar.gz -C tvh-src
 
-      - name: 🔍️ Extract build paths
-        working-directory: CoreELEC
+      - name: 📥 Apply patches
         run: |
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
-          echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
-          echo "build_dir=${BUILD}" >> $GITHUB_ENV
-          echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
+          cp .github/patches/up-libdvbcsa.patch tvh-src/
+          cp .github/patches/tvheadend43-newer.patch tvh-src/
+          cd tvh-src
+          git init
+          git config user.name "CI"
+          git config user.email "ci@example.com"
+          git add .
+          git commit -m "base"
+          patch -p1 < up-libdvbcsa.patch
+          patch -p1 < tvheadend43-newer.patch
 
-      - name: 💽️ Cache build sources
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.sources_dir }}
-            ${{ env.build_dir }}/.ccache
-            ${{ env.build_dir }}/.ccache-local
-          key: ${{ env.project }}-Amlogic-no
-          restore-keys: ${{ env.project }}-
-
-      - name: 🤔️ Add fallback sources if needed
+      - name: 🛠️ Build patched tvheadend
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
-          fi
-
-      - name: 😮️ Add tvheadend patch
-        run: |
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-
-      - name: 👷️ Build tvheadend addon (without comskip)
-        working-directory: CoreELEC
-        run: |
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon --disable-depends tvheadend43 
+          cd tvh-src
+          ./configure --prefix=/usr \
+                      --arch=aarch64 \
+                      --cpu=cortex-a53 \
+                      --enable-avahi \
+                      --enable-bundle \
+                      --disable-dbus_1 \
+                      --enable-dvbcsa \
+                      --disable-dvben50221 \
+                      --disable-dvbscan \
+                      --enable-hdhomerun_client \
+                      --disable-hdhomerun_static \
+                      --enable-epoll \
+                      --enable-inotify \
+                      --enable-pngquant \
+                      --disable-libmfx_static \
+                      --disable-nvenc \
+                      --disable-uriparser \
+                      --enable-tvhcsa \
+                      --enable-trace \
+                      --nowerror \
+                      --disable-bintray_cache \
+                      --python=/usr/bin/python3
+          make -j$(nproc) tvheadend
 
       - name: 📥 Download official addon
         run: |
@@ -72,14 +70,8 @@ jobs:
 
       - name: 🔁 Replace tvheadend binary
         run: |
-          BIN=$(find CoreELEC/build.* -type f -name tvheadend | head -n 1)
-          if [ -f "$BIN" ]; then
-            cp "$BIN" addon/service.tvheadend43/bin/tvheadend
-            chmod +x addon/service.tvheadend43/bin/tvheadend
-          else
-            echo "❌ Binario tvheadend no encontrado"
-            exit 1
-          fi
+          cp tvh-src/tvheadend addon/service.tvheadend43/bin/tvheadend
+          chmod +x addon/service.tvheadend43/bin/tvheadend
 
       - name: 📦 Repack patched addon
         run: |
@@ -95,23 +87,18 @@ jobs:
       - name: 📄 Upload build logs
         if: always()
         run: |
-          echo "🔍 Buscando logs en directorios de build..."
-          LOG_DIR=$(find CoreELEC -type d -path "*/.threads/logs" | head -n 1)
-          if [ -n "$LOG_DIR" ]; then
-            echo "✅ Logs encontrados en: $LOG_DIR"
-            mkdir -p logs-to-upload
-            cp -r "$LOG_DIR"/* logs-to-upload/
-          else
-            echo "⚠️ No se encontraron logs en ningún directorio .threads/logs"
-          fi
+          mkdir -p logs
+          cp tvh-src/config.log logs/ || true
+          cp tvh-src/Makefile logs/ || true
         continue-on-error: true
 
-      - name: 📤️ Upload logs artifact
+      - name: 📤 Upload logs artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: logs-to-upload/
+          path: logs/
           if-no-files-found: warn
+
 
 
