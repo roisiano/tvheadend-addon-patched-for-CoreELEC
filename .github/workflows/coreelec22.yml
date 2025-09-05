@@ -1,7 +1,7 @@
 name: GitHub Automatic Build
 
 on:
-##  push:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -25,12 +25,11 @@ jobs:
         working-directory: CoreELEC
         run: git checkout coreelec-22
 
-      - name: 😜️ Apply dvbcsa patch
+      - name: 📌 Apply libdvbcsa patch
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch || {
-            echo "❌ Error aplicando el parche dvbcsa"
-            exit 1
-          }
+          mkdir -p CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch \
+             CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/001-up-libdvbcsa.patch
 
       - name: 🔍️ Extract build paths
         working-directory: CoreELEC
@@ -61,27 +60,37 @@ jobs:
           cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Build tvheadend addon
+      - name: 👷️ Build tvheadend addon (without comskip)
         working-directory: CoreELEC
         run: |
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43 --disable-depends
 
-      - name: ✅ Verify addon output
+      - name: 📥 Download official addon
         run: |
-          ls -l ${{ github.workspace }}/CoreELEC/target/addons/service.tvheadend43* || {
-            echo "❌ El addon tvheadend43 no se generó correctamente"
+          wget https://raw.githubusercontent.com/roisiano/tvheadend-addon-patched-for-CoreELEC/refs/heads/main/.github/sources/service.tvheadend43-22.0.4.3.zip -O addon.zip
+          unzip addon.zip -d addon
+
+      - name: 🔁 Replace tvheadend binary
+        run: |
+          BIN=$(find CoreELEC/build.* -type f -name tvheadend | head -n 1)
+          if [ -f "$BIN" ]; then
+            cp "$BIN" addon/service.tvheadend43/bin/tvheadend
+            chmod +x addon/service.tvheadend43/bin/tvheadend
+          else
+            echo "❌ Binario tvheadend no encontrado"
             exit 1
-          }
+          fi
 
-      - name: 🗜️ Compress addon
-        working-directory: CoreELEC/target
-        run: zip -rFS9 addons-Amlogic-no.zip addons/service.tvheadend43*
+      - name: 📦 Repack patched addon
+        run: |
+          cd addon
+          zip -r ../service.tvheadend43-22.0.4.3-icam.zip service.tvheadend43
 
-      - name: 📤️ Upload addon zip
+      - name: 📤 Upload patched addon
         uses: actions/upload-artifact@v4
         with:
-          name: target
-          path: CoreELEC/target/addons-Amlogic-no.zip
+          name: tvheadend43-icam
+          path: service.tvheadend43-22.0.4.3-icam.zip
 
       - name: 📄 Upload build logs
         if: always()
@@ -104,4 +113,5 @@ jobs:
           name: build-logs
           path: logs-to-upload/
           if-no-files-found: warn
+
 
