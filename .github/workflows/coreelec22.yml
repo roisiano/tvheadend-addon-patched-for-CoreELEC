@@ -63,7 +63,7 @@ jobs:
       - name: 👷️ Build tvheadend addon (without comskip)
         working-directory: CoreELEC
         run: |
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43 --disable-depends
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon --disable-depends tvheadend43 
 
       - name: 📥 Download official addon
         run: |
