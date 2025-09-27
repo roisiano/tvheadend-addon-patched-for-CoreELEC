@@ -55,17 +55,39 @@ jobs:
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
-      - name: 🛠️ Build comskip dependency
+      - name: 🛠️ Build and install comskip
         working-directory: CoreELEC
         run: |
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build comskip
-
-      - name: ✅ Verify comskip binary
-        run: |
-          ls -l CoreELEC/build*/install/usr/bin/comskip || {
-            echo "❌ comskip no se construyó correctamente"
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build comskip:install || {
+            echo "❌ Fallo al construir e instalar comskip"
             exit 1
           }
+
+      - name: 🔍 Buscar comskip en rutas alternativas
+        run: |
+          echo "🔎 Buscando binario comskip..."
+          find CoreELEC/build* -type f -name comskip -exec ls -l {} \; || {
+            echo "❌ No se encontró el binario comskip en ninguna ruta de build"
+            exit 1
+          }
+
+      - name: 📄 Upload comskip build logs
+        if: always()
+        run: |
+          LOG_DIR=$(find CoreELEC -type d -path "*/comskip/.threads/logs" | head -n 1)
+          if [ -n "$LOG_DIR" ]; then
+            mkdir -p logs-comskip
+            cp -r "$LOG_DIR"/* logs-comskip/
+          fi
+        continue-on-error: true
+
+      - name: 📤️ Upload comskip logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comskip-logs
+          path: logs-comskip/
+          if-no-files-found: warn
 
       - name: 😮️ Add tvheadend patch
         run: |
