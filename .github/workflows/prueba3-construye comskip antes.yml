@@ -1,0 +1,126 @@
+name: GitHub Automatic Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: coreelec-22-Amlogic-no
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 🔌️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔨️ Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
+
+      - name: 📥️ Download CoreELEC
+        run: git clone https://github.com/CoreELEC/CoreELEC
+
+      - name: 📌️ Checkout coreelec-22 branch
+        working-directory: CoreELEC
+        run: git checkout coreelec-22
+
+      - name: 😜️ Apply dvbcsa patch
+        run: |
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch || {
+            echo "❌ Error aplicando el parche dvbcsa"
+            exit 1
+          }
+
+      - name: 🔍️ Extract build paths
+        working-directory: CoreELEC
+        run: |
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          echo "sources_dir=${SOURCES}" >> $GITHUB_ENV
+          echo "build_dir=${BUILD}" >> $GITHUB_ENV
+          echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
+
+      - name: 💽️ Cache build sources
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.sources_dir }}
+            ${{ env.build_dir }}/.ccache
+            ${{ env.build_dir }}/.ccache-local
+          key: ${{ env.project }}-Amlogic-no
+          restore-keys: ${{ env.project }}-
+
+      - name: 🤔️ Add fallback sources if needed
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 🛠️ Build comskip dependency
+        working-directory: CoreELEC
+        run: |
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build comskip
+
+      - name: ✅ Verify comskip binary
+        run: |
+          ls -l CoreELEC/build*/install/usr/bin/comskip || {
+            echo "❌ comskip no se construyó correctamente"
+            exit 1
+          }
+
+      - name: 😮️ Add tvheadend patch
+        run: |
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 👷️ Build tvheadend addon
+        working-directory: CoreELEC
+        run: |
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
+
+      - name: ✅ Verify addon output
+        run: |
+          ls -l ${{ github.workspace }}/CoreELEC/target/addons/service.tvheadend43* || {
+            echo "❌ El addon tvheadend43 no se generó correctamente"
+            exit 1
+          }
+
+      - name: 🔍 Verify comskip in addon zip
+        run: |
+          unzip -l CoreELEC/target/addons-Amlogic-no.zip | grep comskip || {
+            echo "⚠️ comskip no está incluido en el addon zip"
+          }
+
+      - name: 🗜️ Compress addon
+        working-directory: CoreELEC/target
+        run: zip -rFS9 addons-Amlogic-no.zip addons/service.tvheadend43*
+
+      - name: 📤️ Upload addon zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: target
+          path: CoreELEC/target/addons-Amlogic-no.zip
+
+      - name: 📄 Upload build logs
+        if: always()
+        run: |
+          echo "🔍 Buscando logs en directorios de build..."
+          LOG_DIR=$(find CoreELEC -type d -path "*/.threads/logs" | head -n 1)
+          if [ -n "$LOG_DIR" ]; then
+            echo "✅ Logs encontrados en: $LOG_DIR"
+            mkdir -p logs-to-upload
+            cp -r "$LOG_DIR"/* logs-to-upload/
+          else
+            echo "⚠️ No se encontraron logs en ningún directorio .threads/logs"
+          fi
+        continue-on-error: true
+
+      - name: 📤️ Upload logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: logs-to-upload/
+          if-no-files-found: warn
+
+
+
