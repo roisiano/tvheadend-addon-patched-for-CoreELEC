@@ -1,0 +1,9 @@
+diff --git a/packages/addons/addon-depends/comskip/autogen.sh b/packages/addons/addon-depends/comskip/autogen.sh
+new file mode 100755
+index 0000000..1111111
+--- /dev/null
++++ b/packages/addons/addon-depends/comskip/autogen.sh
+@@
++#!/bin/sh
++echo "⚙️ Ejecutando autoreconf para generar configure..."
++autoreconf -i
