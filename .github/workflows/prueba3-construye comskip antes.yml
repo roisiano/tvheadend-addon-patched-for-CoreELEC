@@ -31,6 +31,13 @@ jobs:
             exit 1
           }
 
+      - name: 🩹 Add autogen.sh to comskip
+        run: |
+          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/comskip-add-autogen.patch || {
+            echo "❌ Error aplicando el parche autogen.sh a comskip"
+            exit 1
+          }
+
       - name: 🔍️ Extract build paths
         working-directory: CoreELEC
         run: |
@@ -53,18 +60,6 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
-          fi
-
-      - name: 🛠️ Prepare comskip build (autogen.sh)
-        run: |
-          COMSKIP_DIR=$(find CoreELEC/build* -type d -name "comskip-*" | head -n 1)
-          if [ -x "$COMSKIP_DIR/autogen.sh" ]; then
-            echo "✅ Ejecutando autogen.sh en $COMSKIP_DIR"
-            cd "$COMSKIP_DIR"
-            ./autogen.sh
-          else
-            echo "❌ autogen.sh no encontrado o no ejecutable"
-            exit 1
           fi
 
       - name: 🛠️ Build and install comskip
