@@ -24,17 +24,16 @@ jobs:
         working-directory: CoreELEC
         run: git checkout coreelec-22
 
+      - name: 🛠️ Modify comskip to use master branch
+        run: |
+          sed -i 's|PKG_VERSION="0.83"|PKG_VERSION="master"|' CoreELEC/packages/addons/addon-depends/comskip/package.mk
+          sed -i 's|PKG_URL="https://github.com/erikkaashoek/Comskip/archive/V${PKG_VERSION}.tar.gz"|PKG_URL="https://github.com/erikkaashoek/Comskip/archive/refs/heads/master.tar.gz"|' CoreELEC/packages/addons/addon-depends/comskip/package.mk
+          sed -i 's|PKG_SHA256=.*|PKG_SHA256=""|' CoreELEC/packages/addons/addon-depends/comskip/package.mk
+
       - name: 😜️ Apply dvbcsa patch
         run: |
           patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch || {
             echo "❌ Error aplicando el parche dvbcsa"
-            exit 1
-          }
-
-      - name: 🩹 Add autogen.sh to comskip
-        run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/comskip-add-autogen.patch || {
-            echo "❌ Error aplicando el parche autogen.sh a comskip"
             exit 1
           }
 
@@ -62,7 +61,7 @@ jobs:
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
-      - name: 🛠️ Build and install comskip
+      - name: 🛠️ Build and install comskip (master)
         working-directory: CoreELEC
         run: |
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/build comskip:install || {
@@ -70,15 +69,11 @@ jobs:
             exit 1
           }
 
-      - name: 🔍 Buscar binario comskip en build directo
+      - name: 🔍 Verificar binario comskip
         run: |
           BIN=$(find CoreELEC/build* -type f -name comskip | head -n 1)
           if [ -n "$BIN" ]; then
             echo "✅ Binario comskip encontrado en: $BIN"
-            DEST="${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/install/usr/bin"
-            mkdir -p "$DEST"
-            cp "$BIN" "$DEST"
-            echo "✅ Binario comskip copiado a $DEST"
           else
             echo "❌ Binario comskip no encontrado"
             exit 1
@@ -160,6 +155,7 @@ jobs:
           name: build-logs
           path: logs-to-upload/
           if-no-files-found: warn
+
 
 
 
