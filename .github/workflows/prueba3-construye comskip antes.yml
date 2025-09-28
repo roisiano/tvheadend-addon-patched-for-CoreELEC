@@ -15,7 +15,7 @@ jobs:
       - name: 🔨️ Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
+          sudo apt-get install -y gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind autoconf automake libtool
 
       - name: 📥️ Download CoreELEC
         run: git clone https://github.com/CoreELEC/CoreELEC
@@ -53,6 +53,18 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 🛠️ Prepare comskip build (autogen.sh)
+        run: |
+          COMSKIP_DIR=$(find CoreELEC/build* -type d -name "comskip-*" | head -n 1)
+          if [ -x "$COMSKIP_DIR/autogen.sh" ]; then
+            echo "✅ Ejecutando autogen.sh en $COMSKIP_DIR"
+            cd "$COMSKIP_DIR"
+            ./autogen.sh
+          else
+            echo "❌ autogen.sh no encontrado o no ejecutable"
+            exit 1
           fi
 
       - name: 🛠️ Build and install comskip
@@ -143,6 +155,7 @@ jobs:
           name: build-logs
           path: logs-to-upload/
           if-no-files-found: warn
+
 
 
 
