@@ -43,7 +43,7 @@ jobs:
           git checkout ${{ matrix.tags }}
       - name: 😜️ Update dvbcsa ...
         run: |
-          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/patches/up-libdvbcsa.patch
+          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
       - name: 🔍️ Get path
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
@@ -62,12 +62,12 @@ jobs:
           restore-keys: ${{ env.project }}-
       - name: 🤔️ adding sources for download errors...
         run: |
-          if [ -d ${{ github.workspace }}/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/sources ${{ env.sources_dir }}
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
       - name: 😮️ Patches adding ...
         run: |
-          cp ${{ github.workspace }}/patches/tvheadend43-newer.patch ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: 👷️ Building addons
         run: cd ${{ github.workspace }}/${{ matrix.os }} && ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
       - name: 📤️ Upload target
