@@ -30,6 +30,10 @@ jobs:
           sed -i 's|PKG_URL="https://github.com/erikkaashoek/Comskip/archive/V${PKG_VERSION}.tar.gz"|PKG_URL="https://github.com/erikkaashoek/Comskip/archive/refs/heads/master.tar.gz"|' CoreELEC/packages/addons/addon-depends/comskip/package.mk
           sed -i 's|PKG_SHA256=.*|PKG_SHA256=""|' CoreELEC/packages/addons/addon-depends/comskip/package.mk
 
+      - name: 🧹 Remove obsolete comskip patch
+        run: |
+          rm -f CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-gcc15.patch
+
       - name: 😜️ Apply dvbcsa patch
         run: |
           patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch || {
@@ -155,6 +159,7 @@ jobs:
           name: build-logs
           path: logs-to-upload/
           if-no-files-found: warn
+
 
 
 
