@@ -70,13 +70,19 @@ jobs:
             exit 1
           }
 
-      - name: 🔍 Buscar comskip en rutas alternativas
+      - name: 🔍 Buscar binario comskip en build directo
         run: |
-          echo "🔎 Buscando binario comskip..."
-          find CoreELEC/build* -type f -name comskip -exec ls -l {} \; || {
-            echo "❌ No se encontró el binario comskip en ninguna ruta de build"
+          BIN=$(find CoreELEC/build* -type f -name comskip | head -n 1)
+          if [ -n "$BIN" ]; then
+            echo "✅ Binario comskip encontrado en: $BIN"
+            DEST="${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/install/usr/bin"
+            mkdir -p "$DEST"
+            cp "$BIN" "$DEST"
+            echo "✅ Binario comskip copiado a $DEST"
+          else
+            echo "❌ Binario comskip no encontrado"
             exit 1
-          }
+          fi
 
       - name: 📄 Upload comskip build logs
         if: always()
@@ -85,6 +91,8 @@ jobs:
           if [ -n "$LOG_DIR" ]; then
             mkdir -p logs-comskip
             cp -r "$LOG_DIR"/* logs-comskip/
+          else
+            echo "⚠️ No se encontraron logs específicos de comskip"
           fi
         continue-on-error: true
 
@@ -93,7 +101,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: comskip-logs
-          path: logs-comskip/
+          path: |
+            logs-comskip/
+            CoreELEC/build*/build/comskip-*/config.log
           if-no-files-found: warn
 
       - name: 😮️ Add tvheadend patch
