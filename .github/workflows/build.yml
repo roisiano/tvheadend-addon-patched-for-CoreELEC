@@ -44,7 +44,7 @@ jobs:
       - name: CoreELEC release tags checkout
         run: |
           cd CoreELEC
-          git checkout 21.2-Omega
+          git checkout 21.3-Omega
       - name: adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ github.workspace }}/CoreELEC/sources ]; then
@@ -53,9 +53,9 @@ jobs:
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
         run: cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
@@ -76,8 +76,8 @@ jobs:
         include:
           - device: "Amlogic-ne"
             arch: aarch64
-          - device: "Amlogic-ng-dv"
-            arch: arm
+#          - device: "Amlogic-ng-dv"
+#            arch: arm
           - device: "Amlogic-ng"
             arch: arm
     steps:
@@ -103,9 +103,9 @@ jobs:
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
         run: cd ${{ github.workspace }}/CoreELEC && ARCH=${{ matrix.arch }} PROJECT=Amlogic-ce DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
       - name: Upload target
@@ -144,7 +144,7 @@ jobs:
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
@@ -185,7 +185,7 @@ jobs:
       - name: Patches adding ...
         run: |
           mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches
-          cp ${{ github.workspace }}/.github/patches/libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/libdvbcsa/patches/libdvbcsa-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend42.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend42/patches/tvheadend42-100-LS.patch
           cp ${{ github.workspace }}/.github/patches/tvheadend43.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
       - name: Building addons
