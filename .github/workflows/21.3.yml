@@ -70,22 +70,17 @@ jobs:
           key: ${{ env.project }}-${{ matrix.device }}-${{ matrix.arch }}
           restore-keys: ${{ env.project }}-
 
-      - name: 👷️ Build tvheadend42 addon
+      - name: 👷️ Build tvheadend addons
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42
-
-      - name: 👷️ Build tvheadend43 addon
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42 tvheadend43
 
       - name: 📤️ Upload compiled addons
         uses: actions/upload-artifact@v4
         with:
-          name: target-${{ matrix.device }}-${{ matrix.arch }}
+          name: Omega-${{ matrix.device }}-${{ matrix.arch }}-target
           path: ${{ github.workspace }}/CoreELEC/target/
-          compression-level: 9
+          if-no-files-found: error
 
       - name: 🧾 Guardar todos los logs de errores si falla
         if: failure()
