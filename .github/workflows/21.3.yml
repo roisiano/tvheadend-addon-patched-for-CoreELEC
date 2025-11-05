@@ -5,8 +5,19 @@ on:
 
 jobs:
   build:
-    name: CoreELEC-21.3-Amlogic
+    name: ${{ matrix.project }}-${{ matrix.arch }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: Amlogic-ne
+            arch: aarch64
+            device: Amlogic
+          - project: Amlogic-ng
+            arch: arm
+            device: Amlogic
 
     steps:
       - name: 🔌️ Checkout
@@ -38,7 +49,7 @@ jobs:
       - name: 🔍️ Get build paths
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic DEVICE=Amlogic-ne . config/options
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
           echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
@@ -50,23 +61,23 @@ jobs:
             ${{ env.sources_dir }}
             ${{ env.build_dir }}/.ccache
             ${{ env.build_dir }}/.ccache-local
-          key: ${{ env.project }}-CoreELEC-Amlogic
+          key: ${{ env.project }}-${{ matrix.project }}-${{ matrix.arch }}
           restore-keys: ${{ env.project }}-
 
       - name: 👷️ Build tvheadend42 addon
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic DEVICE=Amlogic-ne scripts/create_addon tvheadend42
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42
 
       - name: 👷️ Build tvheadend43 addon
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic DEVICE=Amlogic-ne scripts/create_addon tvheadend43
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
 
       - name: 📤️ Upload compiled addons
         uses: actions/upload-artifact@v4
         with:
-          name: target-CoreELEC-21.3-Amlogic
+          name: target-${{ matrix.project }}-${{ matrix.arch }}
           path: ${{ github.workspace }}/CoreELEC/target/
           compression-level: 9
 
@@ -74,8 +85,9 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: logs-de-errores-CoreELEC-21.3
+          name: logs-de-errores-${{ matrix.project }}-${{ matrix.arch }}
           path: |
             ${{ env.build_dir }}/.threads/logs/92.log
             ${{ env.build_dir }}/.threads/logs/99.log
             ${{ env.build_dir }}/.threads/logs/100.log
+
