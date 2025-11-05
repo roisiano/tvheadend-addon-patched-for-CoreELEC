@@ -9,15 +9,15 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
 
-strategy:
-  matrix:
-    include:
-      - device: "AMLGX"
-        arch: arm
-        project: "Amlogic"
-      - device: "AMLGX"
-        arch: aarch64
-        project: "Amlogic"
+    strategy:
+      matrix:
+        include:
+          - device: "AMLGX"
+            arch: arm
+            project: "Amlogic"
+          - device: "AMLGX"
+            arch: aarch64
+            project: "Amlogic"
 
     steps:
       - name: 🔌️ Checkout
@@ -49,7 +49,7 @@ strategy:
       - name: 🔍️ Get build paths
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=${{ matrix.arch }} PROJECT=Amlogic DEVICE=Amlogic . config/options
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
           echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
@@ -73,12 +73,12 @@ strategy:
       - name: 👷️ Build tvheadend42 addon
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=${{ matrix.arch }} PROJECT=Amlogic DEVICE=Amlogic scripts/create_addon tvheadend42
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend42
 
       - name: 👷️ Build tvheadend43 addon
         run: |
           cd ${{ github.workspace }}/CoreELEC
-          ARCH=${{ matrix.arch }} PROJECT=Amlogic DEVICE=Amlogic scripts/create_addon tvheadend43
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
 
       - name: 📤️ Upload compiled addons
         uses: actions/upload-artifact@v4
@@ -87,14 +87,11 @@ strategy:
           path: ${{ github.workspace }}/CoreELEC/target/
           compression-level: 9
 
-      - name: 🧾 Guardar logs de errores si falla
+      - name: 🧾 Guardar todos los logs de errores si falla
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: logs-de-errores-${{ matrix.device }}-${{ matrix.arch }}
-          path: |
-            ${{ env.build_dir }}/.threads/logs/92.log
-            ${{ env.build_dir }}/.threads/logs/99.log
-            ${{ env.build_dir }}/.threads/logs/100.log
+          path: ${{ env.build_dir }}/.threads/logs/*.log
 
 
