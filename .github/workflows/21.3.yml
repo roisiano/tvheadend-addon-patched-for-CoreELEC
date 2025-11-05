@@ -44,7 +44,7 @@ jobs:
 
       - name: 🧩 Apply tvheadend43 patch
         run: |
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
       - name: 🔍️ Get build paths
         run: |
