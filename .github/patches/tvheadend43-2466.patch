@@ -1,0 +1,107 @@
+diff --git a/src/descrambler/descrambler.c b/src/descrambler/descrambler.c
+index 7f3c2e1..c9a1b2f 100644
+--- a/src/descrambler/descrambler.c
++++ b/src/descrambler/descrambler.c
+@@ -980,12 +980,20 @@ key_flush(th_descrambler_runtime_t *dr, th_descrambler_key_t *tk, uint8_t changed)
+   if (changed & 1) {
+     tvhdebug(LS_DESCRAMBLER, "%p: even key[%d] set for decoder", dr, tk->key_pid);
+-    tvhcsa_set_key_even(&tk->key_csa, tk->key_data[0]);
++    tvhcsa_set_key_even(&tk->key_csa, tk->key_data[0]
++#if DVBCSA_KEY_ECM > 0
++                        , dr->dr_ecm
++#endif
++    );
+     tk->key_valid |= 0x40;
+   }
+   if (changed & 2) {
+     tvhdebug(LS_DESCRAMBLER, "%p: odd key[%d] set for decoder", dr, tk->key_pid);
+-    tvhcsa_set_key_odd(&tk->key_csa, tk->key_data[1]);
++    tvhcsa_set_key_odd(&tk->key_csa, tk->key_data[1]
++#if DVBCSA_KEY_ECM > 0
++                        , dr->dr_ecm
++#endif
++    );
+     tk->key_valid |= 0x80;
+   }
+ }
+@@ -1402,6 +1410,18 @@ descrambler_table_callback(...)
+             if (tk->key_pid == 0) break;
+           }
+         }
++#if DVBCSA_KEY_ECM > 0
++        caid_t *ca;
++        elementary_stream_t *st;
++        TAILQ_FOREACH(st, &mt->mt_service->s_components.set_filter, es_filter_link) {
++          if (st->es_pid != mt->mt_pid) continue;
++          LIST_FOREACH(ca, &st->es_caids, link) {
++            if (ca->use == 0) continue;
++            dr->dr_ecm = (ca->caid >> 8 == 0x09 && (ptr[2] - ptr[4]) == 4) ? ptr[21] : 0;
++            tvhtrace(LS_DESCRAMBLER, "key ecm=%X (caid=%04X)", dr->dr_ecm, ca->caid);
++          }
++        }
++#endif
+       }
+       tvhtrace(LS_DESCRAMBLER, "ECM message %02x:%02x (section %d, len %d, pid %d) for service \"%s\"",
+                ptr[0], ptr[1], des->number, len, mt->mt_pid, t->s_dvb_svcname);
+diff --git a/src/descrambler/descrambler.h b/src/descrambler/descrambler.h
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/descrambler/descrambler.h
++++ b/src/descrambler/descrambler.h
+@@ -105,6 +105,9 @@ typedef struct th_descrambler_runtime {
+   int64_t dr_ecm_start[2];
+   int64_t dr_ecm_last_key_time;
+   int64_t dr_ecm_key_margin;
++#if DVBCSA_KEY_ECM > 0
++  uint8_t dr_ecm;
++#endif
+   int64_t dr_last_err;
+   int64_t dr_force_skip;
+   th_descrambler_key_t dr_keys[DESCRAMBLER_MAX_KEYS];
+diff --git a/src/descrambler/tvhcsa.c b/src/descrambler/tvhcsa.c
+index 1234567..89abcde 100644
+--- a/src/descrambler/tvhcsa.c
++++ b/src/descrambler/tvhcsa.c
+@@ -230,7 +230,11 @@ tvhcsa_set_type(tvhcsa_t *csa, struct mpegts_service *s, int type)
+ }
+ 
+-void tvhcsa_set_key_even(tvhcsa_t *csa, const uint8_t *even)
++void tvhcsa_set_key_even(tvhcsa_t *csa, const uint8_t *even
++#if DVBCSA_KEY_ECM > 0
++                         , const uint8_t ecm
++#endif
++)
+ {
+   switch (csa->csa_type) {
+   case DESCRAMBLER_CSA_CBC:
+@@ -251,7 +255,11 @@ void tvhcsa_set_key_even(tvhcsa_t *csa, const uint8_t *even)
+ }
+ 
+-void tvhcsa_set_key_odd(tvhcsa_t *csa, const uint8_t *odd)
++void tvhcsa_set_key_odd(tvhcsa_t *csa, const uint8_t *odd
++#if DVBCSA_KEY_ECM > 0
++                         , const uint8_t ecm
++#endif
++)
+ {
+   switch (csa->csa_type) {
+   case DESCRAMBLER_CSA_CBC:
+diff --git a/src/descrambler/tvhcsa.h b/src/descrambler/tvhcsa.h
+index abcdef0..1234567 100644
+--- a/src/descrambler/tvhcsa.h
++++ b/src/descrambler/tvhcsa.h
+@@ -68,8 +68,20 @@ typedef struct tvhcsa tvhcsa_t;
+ 
+ int tvhcsa_set_type(tvhcsa_t *csa, struct mpegts_service *s, int type);
+ 
+-void tvhcsa_set_key_even(tvhcsa_t *csa, const uint8_t *even);
+-void tvhcsa_set_key_odd(tvhcsa_t *csa, const uint8_t *odd);
++void tvhcsa_set_key_even(tvhcsa_t *csa, const uint8_t *even
++#if DVBCSA_KEY_ECM > 0
++                         , const uint8_t ecm
++#endif
++);
++void tvhcsa_set_key_odd(tvhcsa_t *csa, const uint8_t *odd
++#if DVBCSA_KEY_ECM > 0
++                         , const uint8_t ecm
++#endif
++);
