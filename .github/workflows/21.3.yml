@@ -9,13 +9,15 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
 
-    strategy:
-      matrix:
-        include:
-          - device: "Amlogic-ne"
-            arch: aarch64
-          - device: "Amlogic-ng"
-            arch: arm
+strategy:
+  matrix:
+    include:
+      - device: "AMLGX"
+        arch: arm
+        project: "Amlogic"
+      - device: "AMLGX"
+        arch: aarch64
+        project: "Amlogic"
 
     steps:
       - name: 🔌️ Checkout
