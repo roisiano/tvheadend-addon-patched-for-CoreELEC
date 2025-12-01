@@ -1,49 +1,58 @@
 name: GitHub Automatic Build
-
 on:
-  ##  push:
   workflow_dispatch:
 
 jobs:
   build:
-    name: coreelec-22-Amlogic-no
-    runs-on: ubuntu-22.04
+    name: ${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: CoreELEC
+            tags: coreelec-22
+            arch: aarch64
+            project: Amlogic-ce
+            device: Amlogic-no
+
+          - os: LibreELEC.tv
+            tags: master
+            arch: aarch64
+            project: ARM
+            device: ARMv8
+
+          - os: LibreELEC.tv
+            tags: master
+            arch: x86_64
+            project: Generic
+            device: ""   # LibreELEC Generic no necesita DEVICE
 
     steps:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
 
       - name: 🔨️ Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y \
-          gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc \
-          xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-          openjdk-11-jre-headless rsync rename jq rdfind
+        run: sudo apt-get update && sudo apt-get install gcc g++ make git wget zip unzip xz-utils bc curl gperf zip xsltproc xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl openjdk-11-jre-headless rsync rename jq rdfind
 
-      - name: 📥️ Download the CoreELEC
-        run: git clone https://github.com/CoreELEC/CoreELEC
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
-      - name: 📌️ Checkout coreelec-22 branch
+      - name: 📥️ Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
+
+      - name: 📌️ ${{ matrix.os }} release branch checkout
         run: |
-          cd CoreELEC
-          git fetch --all
-          git checkout coreelec-22
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
 
       - name: 😜️ Update dvbcsa ...
         run: |
-          patch -d ${{ github.workspace }}/CoreELEC -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
-
-      # 🆕 Copiar el parche de comskip a la carpeta oficial de parches de CoreELEC
-      - name: 🛠️ Añadir parche comskip FFmpeg 5
-        run: |
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches
-          cp ${{ github.workspace }}/.github/patches/comskip-ffmpeg5.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/addon-depends/comskip/patches/comskip-100-ffmpeg5.patch
+          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
       - name: 🔍️ Get path
         run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
           echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
@@ -55,7 +64,7 @@ jobs:
             ${{ env.sources_dir }}
             ${{ env.build_dir }}/.ccache
             ${{ env.build_dir }}/.ccache-local
-          key: ${{ env.project }}-Amlogic-no
+          key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
           restore-keys: ${{ env.project }}-
 
       - name: 🤔️ adding sources for download errors...
@@ -64,38 +73,17 @@ jobs:
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
-      - name: 📁️ Ensure patch directory exists
-        run: |
-          mkdir -p ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches
-
       - name: 😮️ Patches adding ...
         run: |
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-new.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
-          cp ${{ github.workspace }}/.github/patches/tvheadend43-101-ffmpeg-compat.patch \
-             ${{ github.workspace }}/CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-101-LS.patch
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Building addon
-        run: |
-          cd ${{ github.workspace }}/CoreELEC
-          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
-
-      - name: 🗜️ Compress addon
-        run: |
-          cd ${{ github.workspace }}/CoreELEC/target
-          zip -rFS9 addons-Amlogic-no.zip addons
+      - name: 👷️ Building addons
+        run: cd ${{ github.workspace }}/${{ matrix.os }} && ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
 
       - name: 📤️ Upload target
         uses: actions/upload-artifact@v4
         with:
-          name: target
-          path: ${{ github.workspace }}/CoreELEC/target/*.zip
-
-      - name: 📄 Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: ${{ github.workspace }}/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/.threads/logs/
-          if-no-files-found: warn
+          name: target-${{ env.os }}-${{ matrix.device }}
+          path: ${{ github.workspace }}/${{ matrix.os }}/target/
+          compression-level: 9
 
