@@ -1,0 +1,117 @@
+name: GitHub Automatic Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: CoreELEC
+            tags: origin/coreelec-22
+            arch: aarch64
+            project: Amlogic-ce
+            device: Amlogic-no
+          # Puedes reactivar otras combinaciones si lo necesitas
+          # - os: LibreELEC.tv
+          #   tags: origin/master
+          #   arch: aarch64
+          #   project: ARM
+          #   device: ARMv8
+          # - os: LibreELEC.tv
+          #   tags: origin/master
+          #   arch: x86_64
+          #   project: Generic
+          #   device: Generic
+
+    steps:
+      - name: 🔌 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧹 Check disk space & clean
+        run: |
+          df -h
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: 🔨 Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y \
+          gcc g++ make git wget zip unzip xz-utils bc curl gperf xsltproc \
+          xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
+          openjdk-11-jre-headless rsync rename jq rdfind
+
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥 Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
+
+      - name: 📌 Checkout release tag
+        run: |
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
+      - name: 😜 Patch dvbcsa
+        run: |
+          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
+
+      - name: 🔍 Get paths
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+
+      - name: 💽 Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.build_dir }}/.ccache
+            ${{ env.build_dir }}/.ccache-local
+          key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
+          restore-keys: ${{ env.project }}-
+
+      - name: 🤔 Add sources symlink if needed
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 😮 Apply tvheadend patch
+        run: |
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 📊 Disk usage before build
+        run: df -h
+
+      - name: 👷 Build addon tvheadend43
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
+
+      - name: 📜 Dump failed logs
+        if: failure()
+        run: |
+          echo "=== Showing last 200 lines of logs ==="
+          tail -n 200 ${{ env.build_dir }}/.threads/logs/*.log || true
+
+      - name: 📤 Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ env.os }}-${{ matrix.device }}
+          path: ${{ env.build_dir }}/.threads/logs/
+
+      - name: 📤 Upload target
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-${{ env.os }}-${{ matrix.device }}
+          path: ${{ github.workspace }}/${{ matrix.os }}/target/
+          compression-level: 9
