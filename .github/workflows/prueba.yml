@@ -44,7 +44,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
             patchutils lzop libxml-parser-perl libparse-yapp-perl rsync rename jq rdfind \
-            x11-utils openjdk-17-jre-headless
+            x11-utils x11-xserver-utils xfonts-utils openjdk-17-jre-headless
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
