@@ -40,10 +40,11 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
 
       - name: 🔨 Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y \
-          gcc g++ make git wget zip unzip xz-utils bc curl gperf xsltproc \
-          xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-          openjdk-11-jre-headless rsync rename jq rdfind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+            patchutils lzop libxml-parser-perl libparse-yapp-perl rsync rename jq rdfind \
+            x11-utils openjdk-17-jre-headless
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -115,3 +116,4 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
