@@ -17,34 +17,25 @@ jobs:
             arch: aarch64
             project: Amlogic-ce
             device: Amlogic-no
-          # Puedes reactivar otras combinaciones si lo necesitas
-          # - os: LibreELEC.tv
-          #   tags: origin/master
-          #   arch: aarch64
-          #   project: ARM
-          #   device: ARMv8
-          # - os: LibreELEC.tv
-          #   tags: origin/master
-          #   arch: x86_64
-          #   project: Generic
-          #   device: Generic
 
     steps:
       - name: 🔌 Checkout
         uses: actions/checkout@v4
 
-      - name: 🧹 Check disk space & clean
+      - name: 🧹 Clean & check disk space
         run: |
           df -h
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
+          sudo rm -rf ${{ github.workspace }}/* || true
 
       - name: 🔨 Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
             patchutils lzop libxml-parser-perl libparse-yapp-perl rsync rename jq rdfind \
-            x11-utils x11-xserver-utils xfonts-utils openjdk-17-jre-headless
+            x11-utils x11-xserver-utils xfonts-utils openjdk-17-jre-headless \
+            yasm nasm pkg-config libtool autoconf automake
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -92,10 +83,11 @@ jobs:
       - name: 📊 Disk usage before build
         run: df -h
 
-      - name: 👷 Build addon tvheadend43
+      - name: 👷 Build addon tvheadend43 (limit jobs)
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/create_addon tvheadend43
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
+          PKG_MAKE_OPTS_TARGET="-j2" scripts/create_addon tvheadend43
 
       - name: 📜 Dump failed logs
         if: failure()
