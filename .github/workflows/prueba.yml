@@ -68,12 +68,12 @@ jobs:
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
           fi
 
-      - name: 📦 Flatten sources (copiar todo)
+      - name: 📦 Flatten sources (copiar todo sin sobreescribir)
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
-            # Copiar todos los ficheros de subcarpetas al raíz de SOURCES
-            find ${{ github.workspace }}/.github/sources -type f -exec cp {} ${{ env.sources_dir }} \;
+            # Copiar todos los ficheros de subcarpetas al raíz de SOURCES, sin sobreescribir
+            find ${{ github.workspace }}/.github/sources -type f -exec cp -n {} ${{ env.sources_dir }} \;
           fi
 
       - name: 😮️ Patches adding ...
