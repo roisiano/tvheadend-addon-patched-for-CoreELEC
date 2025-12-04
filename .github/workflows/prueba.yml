@@ -1,7 +1,7 @@
 name: GitHub Automatic Build
 on:
+##  push:
   workflow_dispatch:
-
 jobs:
   build:
     name: ${{ matrix.os }}-${{ matrix.device }}
@@ -9,21 +9,27 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: CoreELEC
-            tags: origin/coreelec-22
-            arch: aarch64
-            project: Amlogic-ce
-            device: Amlogic-no
+        - os: CoreELEC
+          tags: origin/coreelec-22
+          arch: aarch64
+          project: Amlogic-ce
+          device: Amlogic-no
+
+#        - os: LibreELEC.tv
+#          tags: origin/master
+#          arch: aarch64
+#          project: ARM
+#          device: ARMv8
+
+#        - os: LibreELEC.tv
+#          tags: origin/master
+#          arch: x86_64
+#          project: Generic
+#          device: Generic
 
     steps:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
-
-      - name: 🧹 Clean & check disk space
-        run: |
-          df -h
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
 
       - name: 🔨️ Install base dependencies
         run: |
@@ -31,19 +37,25 @@ jobs:
             build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
             x11-utils x11-xserver-utils xfonts-utils \
             patchutils lzop libxml-parser-perl libparse-yapp-perl \
-            openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
+            openjdk-11-jre-headless openjdk-17-jre-headless \
+            rsync rename jq rdfind yasm nasm pkg-config \
             libtool autoconf automake
 
+      # Set OS without the part after the dot (e.g., LibreELEC.tv => LibreELEC)
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
       - name: 📥️ Download the ${{ matrix.os }}
-        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }} ${{ github.workspace }}/${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
 
       - name: 📌️ ${{ matrix.os }} release tags checkout
         run: |
-          cd ${{ github.workspace }}/${{ matrix.os }}
+          cd ${{ matrix.os }}
           git checkout ${{ matrix.tags }}
+
+      - name: 😜️ Update dvbcsa ...
+        run: |
+          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
       - name: 🔍️ Get path
         run: |
@@ -52,36 +64,6 @@ jobs:
           echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
-
-      - name: 🤔️ adding sources for download errors...
-        run: |
-          if [ -d ${{ github.workspace }}/.github/sources ]; then
-            mkdir -p ${{ env.sources_dir }}
-            ln -sf ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}/extra-sources
-          fi
-
-      - name: 🛠️ Check & install missing deps
-        run: |
-          cd ${{ github.workspace }}/${{ matrix.os }}
-          missing=$(ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} ${SCRIPTS}/checkdeps 2>&1 | grep "provided by" | awk '{print $NF}' | sort -u)
-          if [ -n "$missing" ]; then
-            echo "Dependencias faltantes detectadas: $missing"
-            pkgs=""
-            for dep in $missing; do
-              case "$dep" in
-                mkfontdir|mkfontscale) pkgs="$pkgs x11-xserver-utils" ;;
-                bdftopcf) pkgs="$pkgs xfonts-utils" ;;
-                *) pkgs="$pkgs $dep" ;;
-              esac
-            done
-            echo "Instalando paquetes: $pkgs"
-            sudo apt-get update
-            sudo apt-get install -y $pkgs || true
-          fi
-
-      - name: 😜️ Update dvbcsa ...
-        run: |
-          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
 
       - name: 💽️ Cache
         uses: actions/cache@v4
@@ -93,18 +75,18 @@ jobs:
           key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
           restore-keys: ${{ env.project }}-
 
+      - name: 🤔️ adding sources for download errors...
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
+            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
       - name: 😮️ Patches adding ...
         run: |
           cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Build ffmpegx first
-        run: |
-          cd ${{ github.workspace }}/${{ matrix.os }}
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
-          PKG_MAKE_OPTS_TARGET="-j2" scripts/build ffmpegx
-
-      - name: 👷️ Building addons (tvheadend43)
+      - name: 👷️ Building addons
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
@@ -116,6 +98,5 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
-
 
 
