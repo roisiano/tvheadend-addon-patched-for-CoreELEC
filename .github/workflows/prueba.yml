@@ -78,7 +78,7 @@ jobs:
       - name: 📊 Disk usage before build
         run: df -h
 
-      - name: 🧹 Clean build dir (prevent space issues)
+      - name: 🧹 Clean build dir (safe pre-build cleanup)
         run: |
           rm -rf ${{ env.build_dir }}/* || true
           rm -rf ${{ env.sources_dir }}/*.tmp || true
@@ -87,7 +87,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
-          make -j4 ffmpegx
+          scripts/build ffmpegx -j4
 
       - name: 😮️ Patches adding ...
         run: |
@@ -106,5 +106,6 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
 
