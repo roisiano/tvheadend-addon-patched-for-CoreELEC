@@ -45,6 +45,13 @@ jobs:
           cd ${{ github.workspace }}/${{ matrix.os }}
           git checkout ${{ matrix.tags }}
 
+      - name: 🤔️ adding sources for download errors...
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            ln -sf ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}/extra-sources
+          fi
+
       - name: 🛠️ Check & install missing deps
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
@@ -86,12 +93,6 @@ jobs:
           key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔️ adding sources for download errors...
-        run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
-          fi
-
       - name: 😮️ Patches adding ...
         run: |
           cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
@@ -115,7 +116,6 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
-
 
 
 
