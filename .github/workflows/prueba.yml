@@ -5,7 +5,7 @@ on:
 jobs:
   build:
     name: ${{ matrix.os }}-${{ matrix.device }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
@@ -27,9 +27,10 @@ jobs:
 
       - name: 🔨️ Install dependencies
         run: sudo apt-get update && sudo apt-get install -y \
-          gcc g++ make git wget zip unzip xz-utils bc curl gperf xsltproc \
-          xfonts-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-          openjdk-11-jre-headless rsync rename jq rdfind yasm nasm pkg-config libtool autoconf automake
+    build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+    x11-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
+    openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
+    libtool autoconf automake
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
