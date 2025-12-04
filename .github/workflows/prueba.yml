@@ -9,11 +9,11 @@ jobs:
     strategy:
       matrix:
         include:
-        - os: CoreELEC
-          tags: origin/coreelec-22
-          arch: aarch64
-          project: Amlogic-ce
-          device: Amlogic-no
+          - os: CoreELEC
+            tags: origin/coreelec-22
+            arch: aarch64
+            project: Amlogic-ce
+            device: Amlogic-no
 
     steps:
       - name: 🔌️ Checkout
@@ -26,11 +26,12 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
 
       - name: 🔨️ Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y \
-    build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
-    x11-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
-    openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
-    libtool autoconf automake
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+            x11-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
+            openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
+            libtool autoconf automake
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -94,4 +95,5 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
