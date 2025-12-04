@@ -45,6 +45,14 @@ jobs:
           cd ${{ github.workspace }}/${{ matrix.os }}
           git checkout ${{ matrix.tags }}
 
+      - name: 🔍️ Get path
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+
       - name: 🤔️ adding sources for download errors...
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
@@ -74,14 +82,6 @@ jobs:
       - name: 😜️ Update dvbcsa ...
         run: |
           patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
-
-      - name: 🔍️ Get path
-        run: |
-          cd ${{ github.workspace }}/${{ matrix.os }}
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
-          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
-          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
-          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
       - name: 💽️ Cache
         uses: actions/cache@v4
