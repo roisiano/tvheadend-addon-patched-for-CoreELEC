@@ -34,14 +34,23 @@ jobs:
             openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
             libtool autoconf automake
 
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥️ Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }} ${{ github.workspace }}/${{ matrix.os }}
+
+      - name: 📌️ ${{ matrix.os }} release tags checkout
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
       - name: 🛠️ Check & install missing deps
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
-          # Ejecutar checkdeps y capturar dependencias faltantes
           missing=$(ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} ${SCRIPTS}/checkdeps 2>&1 | grep "provided by" | awk '{print $NF}' | sort -u)
           if [ -n "$missing" ]; then
             echo "Dependencias faltantes detectadas: $missing"
-            # Tabla de equivalencias para Ubuntu 24.04
             pkgs=""
             for dep in $missing; do
               case "$dep" in
@@ -54,17 +63,6 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y $pkgs || true
           fi
-
-      - name: ✂️ Set OS without extension
-        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
-
-      - name: 📥️ Download the ${{ matrix.os }}
-        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
-
-      - name: 📌️ ${{ matrix.os }} release tags checkout
-        run: |
-          cd ${{ matrix.os }}
-          git checkout ${{ matrix.tags }}
 
       - name: 😜️ Update dvbcsa ...
         run: |
@@ -117,6 +115,7 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
 
 
