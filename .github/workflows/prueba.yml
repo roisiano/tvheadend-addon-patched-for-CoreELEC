@@ -73,7 +73,7 @@ jobs:
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
             # Copiar todos los ficheros de subcarpetas al raíz de SOURCES, sin sobreescribir
-            find ${{ github.workspace }}/.github/sources -type f -exec cp -n {} ${{ env.sources_dir }} \;
+            find ${{ github.workspace }}/.github/sources -type f -exec cp --update=none {} ${{ env.sources_dir }} \;
           fi
 
       - name: 😮️ Patches adding ...
