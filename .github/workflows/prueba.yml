@@ -15,18 +15,6 @@ jobs:
           project: Amlogic-ce
           device: Amlogic-no
 
-#        - os: LibreELEC.tv
-#          tags: origin/master
-#          arch: aarch64
-#          project: ARM
-#          device: ARMv8
-
-#        - os: LibreELEC.tv
-#          tags: origin/master
-#          arch: x86_64
-#          project: Generic
-#          device: Generic
-
     steps:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
@@ -41,7 +29,6 @@ jobs:
             rsync rename jq rdfind yasm nasm pkg-config \
             libtool autoconf automake
 
-      # Set OS without the part after the dot (e.g., LibreELEC.tv => LibreELEC)
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
@@ -79,6 +66,14 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
             ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
+          fi
+
+      - name: 📦 Flatten sources (copiar todo)
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            # Copiar todos los ficheros de subcarpetas al raíz de SOURCES
+            find ${{ github.workspace }}/.github/sources -type f -exec cp {} ${{ env.sources_dir }} \;
           fi
 
       - name: 😮️ Patches adding ...
