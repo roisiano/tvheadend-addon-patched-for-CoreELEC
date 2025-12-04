@@ -1,7 +1,7 @@
 name: GitHub Automatic Build
 on:
-##  push:
   workflow_dispatch:
+
 jobs:
   build:
     name: ${{ matrix.os }}-${{ matrix.device }}
@@ -72,9 +72,22 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
-            # Copiar todos los ficheros de subcarpetas al raíz de SOURCES, sin sobreescribir
             find ${{ github.workspace }}/.github/sources -type f -exec cp --update=none {} ${{ env.sources_dir }} \;
           fi
+
+      - name: 📊 Disk usage before build
+        run: df -h
+
+      - name: 🧹 Clean build dir (prevent space issues)
+        run: |
+          rm -rf ${{ env.build_dir }}/* || true
+          rm -rf ${{ env.sources_dir }}/*.tmp || true
+
+      - name: 👷️ Building ffmpegx first (limited jobs)
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
+          make -j4 ffmpegx
 
       - name: 😮️ Patches adding ...
         run: |
