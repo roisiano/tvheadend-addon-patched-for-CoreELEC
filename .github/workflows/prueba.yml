@@ -31,7 +31,8 @@ jobs:
             build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
             x11-utils patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-17-jre-headless rsync rename jq rdfind yasm nasm pkg-config \
-            libtool autoconf automake
+            libtool autoconf automake \
+            mkfontscale mkfontdir bdftopcf
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
