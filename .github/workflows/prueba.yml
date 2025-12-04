@@ -89,16 +89,28 @@ jobs:
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
           scripts/build ffmpegx -j4
 
+      - name: 📤️ Upload ffmpegx build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpegx-${{ env.os }}-${{ matrix.device }}
+          path: |
+            ${{ github.workspace }}/${{ matrix.os }}/target/*ffmpeg*
+            ${{ github.workspace }}/${{ matrix.os }}/toolchain/*ffmpeg*
+          compression-level: 9
+
+      - name: 🧹 Clean ffmpegx build dir (free space)
+        run: rm -rf ${{ env.build_dir }}/ffmpegx-* || true
+
       - name: 😮️ Patches adding ...
         run: |
           cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Building addons
+      - name: 👷️ Building addons (limited jobs)
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
-          scripts/create_addon tvheadend43
+          scripts/create_addon tvheadend43 -j2
 
       - name: 📤️ Upload target
         uses: actions/upload-artifact@v4
