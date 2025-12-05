@@ -94,8 +94,8 @@ jobs:
         with:
           name: ffmpegx-${{ env.os }}-${{ matrix.device }}
           path: |
-            ${{ github.workspace }}/${{ matrix.os }}/target/*ffmpeg*
-            ${{ github.workspace }}/${{ matrix.os }}/toolchain/*ffmpeg*
+            ${{ env.build_dir }}/target/bin/ffmpeg*
+            ${{ env.build_dir }}/target/bin/ffprobe*
           compression-level: 9
 
       - name: 🧹 Clean ffmpegx build dir (free space)
@@ -118,6 +118,5 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
-
 
 
