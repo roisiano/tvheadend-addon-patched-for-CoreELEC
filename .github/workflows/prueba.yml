@@ -62,19 +62,6 @@ jobs:
           key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
           restore-keys: ${{ env.project }}-
 
-      - name: 🤔️ adding sources for download errors...
-        run: |
-          if [ -d ${{ github.workspace }}/.github/sources ] && [ ! -d ${{ env.sources_dir }} ]; then
-            ln -s ${{ github.workspace }}/.github/sources ${{ env.sources_dir }}
-          fi
-
-      - name: 📦 Flatten sources (copiar todo sin sobreescribir)
-        run: |
-          if [ -d ${{ github.workspace }}/.github/sources ]; then
-            mkdir -p ${{ env.sources_dir }}
-            find ${{ github.workspace }}/.github/sources -type f -exec cp --update=none {} ${{ env.sources_dir }} \;
-          fi
-
       - name: 📊 Disk usage before build
         run: df -h
 
@@ -89,6 +76,12 @@ jobs:
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
           scripts/build ffmpegx -j4
 
+      - name: 🔎 Locate ffmpeg binaries
+        run: |
+          echo "Buscando ffmpeg y ffprobe en el árbol de build..."
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          find . -name ffmpeg -o -name ffprobe
+
       - name: 📤️ Upload ffmpegx build
         uses: actions/upload-artifact@v4
         with:
@@ -97,6 +90,7 @@ jobs:
             ${{ env.build_dir }}/target/bin/ffmpeg*
             ${{ env.build_dir }}/target/bin/ffprobe*
           compression-level: 9
+          if-no-files-found: warn
 
       - name: 🧹 Clean ffmpegx build dir (free space)
         run: rm -rf ${{ env.build_dir }}/ffmpegx-* || true
