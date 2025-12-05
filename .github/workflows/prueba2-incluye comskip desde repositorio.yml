@@ -1,0 +1,135 @@
+name: GitHub Automatic Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+        - os: CoreELEC
+          tags: origin/coreelec-22
+          arch: aarch64
+          project: Amlogic-ce
+          device: Amlogic-no
+
+    steps:
+      - name: 🔌️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔨️ Install base dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+            x11-utils x11-xserver-utils xfonts-utils \
+            patchutils lzop libxml-parser-perl libparse-yapp-perl \
+            openjdk-11-jre-headless openjdk-17-jre-headless \
+            rsync rename jq rdfind yasm nasm pkg-config \
+            libtool autoconf automake
+
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥️ Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
+
+      - name: 📌️ ${{ matrix.os }} release tags checkout
+        run: |
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
+      - name: 😜️ Update dvbcsa ...
+        run: |
+          patch -d ${{ github.workspace }}/${{ matrix.os }} -p1 < ${{ github.workspace }}/.github/patches/up-libdvbcsa.patch
+
+      - name: 🔍️ Get path
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+
+      - name: 💽️ Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.sources_dir }}
+            ${{ env.build_dir }}/.ccache
+            ${{ env.build_dir }}/.ccache-local
+          key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
+          restore-keys: ${{ env.project }}-
+
+      - name: 📦 Copy local sources to CoreELEC
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
+          fi
+
+      - name: 📊 Disk usage before build
+        run: df -h
+
+      - name: 🧹 Clean build dir (safe pre-build cleanup)
+        run: |
+          rm -rf ${{ env.build_dir }}/* || true
+          rm -rf ${{ env.sources_dir }}/*.tmp || true
+
+      # --- BLOQUE: ffmpegx ---
+      - name: 📥️ Intentar descargar ffmpegx desde release
+        run: |
+          mkdir -p .github/ffmpegx
+          if curl -L -o ffmpegx.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/ffmpegx-CoreELEC-Amlogic-no.zip; then
+            unzip ffmpegx.zip -d .github/ffmpegx
+            mkdir -p ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/
+            cp .github/ffmpegx/ffmpeg ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+            cp .github/ffmpegx/ffprobe ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+            chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg
+            chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe
+            echo "✅ ffmpegx instalado desde release"
+          else
+            echo "⚠️ No se pudo descargar ffmpegx, se compilará..."
+            cd ${{ github.workspace }}/${{ matrix.os }}
+            ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/build ffmpegx -j4
+          fi
+
+      # --- BLOQUE: comskip ---
+      - name: 📥️ Intentar descargar comskip desde release
+        run: |
+          mkdir -p .github/comskip
+          if curl -L -o comskip.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/comskip.zip; then
+            unzip comskip.zip -d .github/comskip
+            mkdir -p ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/
+            cp .github/comskip/comskip ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/ || true
+            chmod +x ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip
+            echo "✅ comskip instalado desde release"
+          else
+            echo "⚠️ No se pudo descargar comskip, se omitirá"
+          fi
+
+      - name: 🔎 Verificar binarios disponibles
+        run: |
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg -version || echo "ffmpeg no ejecuta"
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe -version || echo "ffprobe no ejecuta"
+          ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip --version || echo "comskip no ejecuta"
+
+      - name: 😮️ Patches adding ...
+        run: |
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 👷️ Building addons (limited jobs)
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
+          scripts/create_addon tvheadend43 -j2
+
+      - name: 📤️ Upload target
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-${{ env.os }}-${{ matrix.device }}
+          path: ${{ github.workspace }}/${{ matrix.os }}/target/
+          compression-level: 9
+
