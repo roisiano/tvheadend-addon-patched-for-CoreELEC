@@ -62,6 +62,13 @@ jobs:
           key: ${{ env.project }}-${{ env.os }}-${{ matrix.device }}
           restore-keys: ${{ env.project }}-
 
+      - name: 📦 Copy local sources to CoreELEC
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
+          fi
+
       - name: 📊 Disk usage before build
         run: df -h
 
