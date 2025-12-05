@@ -66,8 +66,18 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
+            # Copiar toda la estructura de subcarpetas
             cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
+            # Copiar también todos los ficheros al nivel raíz
+            find ${{ github.workspace }}/.github/sources -type f -maxdepth 2 -exec cp {} ${{ env.sources_dir }}/ \;
           fi
+
+      - name: 🔎 Verificar sources locales
+        run: |
+          echo "Contenido en ${{ env.sources_dir }}:"
+          ls -lh ${{ env.sources_dir }} | head -50
+          echo "Checksums conocidos:"
+          sha256sum ${{ env.sources_dir }}/binutils-2.41.tar.xz || true
 
       - name: 📊 Disk usage before build
         run: df -h
