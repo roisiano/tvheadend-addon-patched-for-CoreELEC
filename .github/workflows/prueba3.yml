@@ -1,0 +1,149 @@
+name: GitHub Automatic Build
+on:
+  workflow_dispatch:
+
+jobs:
+  toolchain:
+    name: Toolchain-${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+        - os: CoreELEC
+          tags: origin/coreelec-22
+          arch: aarch64
+          project: Amlogic-ce
+          device: Amlogic-no
+
+    steps:
+      - name: 🔌️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔨️ Install base dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+            patchutils lzop libxml-parser-perl libparse-yapp-perl \
+            openjdk-11-jre-headless openjdk-17-jre-headless \
+            rsync rename jq rdfind yasm nasm pkg-config \
+            libtool autoconf automake
+
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥️ Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
+
+      - name: 📌️ ${{ matrix.os }} release tags checkout
+        run: |
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
+      - name: 🔍️ Get path
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+
+      - name: 📦 Copy local sources to CoreELEC
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
+            find ${{ github.workspace }}/.github/sources -type f -maxdepth 2 -exec cp {} ${{ env.sources_dir }}/ \;
+          fi
+
+      - name: 👷️ Build toolchain
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/build toolchain -j2
+
+  tvheadend:
+    name: Tvheadend-${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+    needs: toolchain
+    strategy:
+      matrix:
+        include:
+        - os: CoreELEC
+          tags: origin/coreelec-22
+          arch: aarch64
+          project: Amlogic-ce
+          device: Amlogic-no
+
+    steps:
+      - name: 🔌️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔨️ Install base dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
+            patchutils lzop libxml-parser-perl libparse-yapp-perl \
+            openjdk-11-jre-headless openjdk-17-jre-headless \
+            rsync rename jq rdfind yasm nasm pkg-config \
+            libtool autoconf automake
+
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥️ Download the ${{ matrix.os }}
+        run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
+
+      - name: 📌️ ${{ matrix.os }} release tags checkout
+        run: |
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
+      - name: 🔍️ Get path
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$(echo ${SOURCES})" >> $GITHUB_ENV
+          echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
+          echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
+
+      - name: 🧹 Clean build dir (safe pre-build cleanup)
+        run: |
+          # Limpia espacio pero conserva sources y binarios precargados
+          rm -rf ${{ env.build_dir }}/* || true
+          df -h
+
+      # --- BLOQUE: ffmpegx y comskip ya precargados ---
+      - name: 📥️ Copiar binarios ffmpegx y comskip
+        run: |
+          mkdir -p ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/
+          cp .github/ffmpegx/ffmpeg ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+          cp .github/ffmpegx/ffprobe ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+          chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg
+          chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe
+
+          mkdir -p ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/
+          cp .github/comskip/comskip ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/ || true
+          chmod +x ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip
+
+      - name: 🔎 Verificar binarios disponibles
+        run: |
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg -version || echo "ffmpeg no ejecuta"
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe -version || echo "ffprobe no ejecuta"
+          ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip --version || echo "comskip no ejecuta"
+
+      - name: 😮️ Patches adding ...
+        run: |
+          cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
+             ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 👷️ Build tvheadend addon
+        run: |
+          cd ${{ github.workspace }}/${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
+          scripts/create_addon tvheadend43 -j2
+
+      - name: 📤️ Upload addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvheadend43-${{ env.os }}-${{ matrix.device }}
+          path: ${{ github.workspace }}/${{ matrix.os }}/target/
+          compression-level: 9
