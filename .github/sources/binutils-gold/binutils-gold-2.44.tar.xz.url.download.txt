@@ -1,0 +1,3 @@
+http://sources.coreelec.org/binutils-gold/binutils-gold-2.44.tar.xz
+http://sources.libreelec.tv/mirror/binutils-gold/binutils-gold-2.44.tar.xz
+https://ftp.gnu.org/gnu/binutils/binutils-with-gold-2.44.tar.xz
