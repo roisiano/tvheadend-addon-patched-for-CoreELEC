@@ -77,30 +77,27 @@ jobs:
           rm -rf ${{ env.build_dir }}/* || true
           rm -rf ${{ env.sources_dir }}/*.tmp || true
 
-      - name: 👷️ Building ffmpegx first (limited jobs)
+      # --- NUEVO BLOQUE: intentar descargar ffmpegx ---
+      - name: 📥️ Intentar descargar ffmpegx desde release
         run: |
-          cd ${{ github.workspace }}/${{ matrix.os }}
-          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
-          scripts/build ffmpegx -j4
+          mkdir -p .github/ffmpegx
+          if curl -L -o ffmpegx.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/ffmpegx-CoreELEC-Amlogic-no.zip; then
+            unzip ffmpegx.zip -d .github/ffmpegx
+            mkdir -p ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/
+            cp .github/ffmpegx/ffmpeg ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+            cp .github/ffmpegx/ffprobe ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
+            echo "✅ ffmpegx descargado desde release"
+          else
+            echo "⚠️ No se pudo descargar ffmpegx, se compilará..."
+            cd ${{ github.workspace }}/${{ matrix.os }}
+            ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/build ffmpegx -j4
+          fi
 
-      - name: 🔎 Locate ffmpeg binaries
+      - name: 🔎 Verificar ffmpeg disponible
         run: |
-          echo "Buscando ffmpeg y ffprobe en el árbol de build..."
-          cd ${{ github.workspace }}/${{ matrix.os }}
-          find . -name ffmpeg -o -name ffprobe
-
-      - name: 📤️ Upload ffmpegx final binarios
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffmpegx-${{ env.os }}-${{ matrix.device }}
-          path: |
-            ${{ env.build_dir }}/install_pkg/ffmpegx-*/usr/local/bin/ffmpeg
-            ${{ env.build_dir }}/install_pkg/ffmpegx-*/usr/local/bin/ffprobe
-          compression-level: 9
-          if-no-files-found: warn
-
-      - name: 🧹 Clean ffmpegx build dir (free space)
-        run: rm -rf ${{ env.build_dir }}/ffmpegx-* || true
+          which ffmpeg || echo "ffmpeg no está en PATH"
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg -version || echo "ffmpeg no ejecuta"
+          ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe -version || echo "ffprobe no ejecuta"
 
       - name: 😮️ Patches adding ...
         run: |
@@ -119,5 +116,6 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
 
