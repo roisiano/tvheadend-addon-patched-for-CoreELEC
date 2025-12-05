@@ -86,7 +86,9 @@ jobs:
             mkdir -p ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/
             cp .github/ffmpegx/ffmpeg ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
             cp .github/ffmpegx/ffprobe ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ || true
-            echo "✅ ffmpegx descargado desde release"
+            chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg
+            chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe
+            echo "✅ ffmpegx instalado desde release"
           else
             echo "⚠️ No se pudo descargar ffmpegx, se compilará..."
             cd ${{ github.workspace }}/${{ matrix.os }}
@@ -95,7 +97,6 @@ jobs:
 
       - name: 🔎 Verificar ffmpeg disponible
         run: |
-          which ffmpeg || echo "ffmpeg no está en PATH"
           ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg -version || echo "ffmpeg no ejecuta"
           ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe -version || echo "ffprobe no ejecuta"
 
@@ -116,6 +117,7 @@ jobs:
           name: target-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
 
 
