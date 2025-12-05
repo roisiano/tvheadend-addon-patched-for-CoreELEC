@@ -89,13 +89,13 @@ jobs:
           cd ${{ github.workspace }}/${{ matrix.os }}
           find . -name ffmpeg -o -name ffprobe
 
-      - name: 📤️ Upload ffmpegx build
+      - name: 📤️ Upload ffmpegx final binarios
         uses: actions/upload-artifact@v4
         with:
           name: ffmpegx-${{ env.os }}-${{ matrix.device }}
           path: |
-            ${{ env.build_dir }}/target/bin/ffmpeg*
-            ${{ env.build_dir }}/target/bin/ffprobe*
+            ${{ env.build_dir }}/install_pkg/ffmpegx-*/usr/local/bin/ffmpeg
+            ${{ env.build_dir }}/install_pkg/ffmpegx-*/usr/local/bin/ffprobe
           compression-level: 9
           if-no-files-found: warn
 
