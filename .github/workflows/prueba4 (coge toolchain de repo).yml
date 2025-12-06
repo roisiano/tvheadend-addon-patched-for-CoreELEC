@@ -53,6 +53,17 @@ jobs:
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
+      # --- BLOQUE: Copiar tus fuentes locales ---
+      - name: 📦 Copy local sources to CoreELEC
+        run: |
+          if [ -d ${{ github.workspace }}/.github/sources ]; then
+            mkdir -p ${{ env.sources_dir }}
+            # Copiar toda la estructura de subcarpetas
+            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
+            # Copiar también todos los ficheros al nivel raíz
+            find ${{ github.workspace }}/.github/sources -maxdepth 2 -type f -exec cp {} ${{ env.sources_dir }}/ \;
+          fi
+
       - name: 🧹 Clean build dir (safe pre-build cleanup)
         run: |
           rm -rf ${{ env.build_dir }}/* || true
