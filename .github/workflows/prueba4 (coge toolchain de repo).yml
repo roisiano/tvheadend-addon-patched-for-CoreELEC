@@ -106,11 +106,11 @@ jobs:
           compression-level: 9
 
       # --- BLOQUE: Mostrar logs de fallos (100 líneas) ---
-      - name: 📜 Mostrar primeros 100 líneas de logs de fallos
+      - name: 📜 Mostrar primeros 100 líneas de logs con FAIL
         if: failure()
         run: |
           echo "=== Logs de fallos (primeras 100 líneas) ==="
-          for log in $(find ${{ env.build_dir }}/.threads/logs -type f | sort); do
+          for log in $(grep -l "FAILURE" ${{ env.build_dir }}/.threads/logs/*.log | sort); do
             echo "--- $log ---"
             head -n 100 "$log"
           done
