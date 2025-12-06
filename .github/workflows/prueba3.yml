@@ -26,15 +26,7 @@ jobs:
             patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless openjdk-17-jre-headless \
             rsync rename jq rdfind yasm nasm pkg-config \
-            libtool autoconf automake
-
-      - name: 🔨️ Install missing X11 font utils
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xfonts-utils
-          which mkfontdir || echo "mkfontdir no encontrado"
-          which mkfontscale || echo "mkfontscale no encontrado"
-          which bdftopcf || echo "bdftopcf no encontrado"
+            libtool autoconf automake xfonts-utils
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -55,18 +47,17 @@ jobs:
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
-      - name: 📦 Copy local sources to CoreELEC
-        run: |
-          if [ -d ${{ github.workspace }}/.github/sources ]; then
-            mkdir -p ${{ env.sources_dir }}
-            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
-            find ${{ github.workspace }}/.github/sources -type f -maxdepth 2 -exec cp {} ${{ env.sources_dir }}/ \;
-          fi
-
       - name: 👷️ Build toolchain
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} scripts/build toolchain -j2
+
+      - name: 📤️ Upload toolchain artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolchain-${{ env.os }}-${{ matrix.device }}
+          path: ${{ env.build_dir }}/toolchain/
+          compression-level: 9
 
   tvheadend:
     name: Tvheadend-${{ matrix.os }}-${{ matrix.device }}
@@ -92,15 +83,7 @@ jobs:
             patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless openjdk-17-jre-headless \
             rsync rename jq rdfind yasm nasm pkg-config \
-            libtool autoconf automake
-
-      - name: 🔨️ Install missing X11 font utils
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xfonts-utils
-          which mkfontdir || echo "mkfontdir no encontrado"
-          which mkfontscale || echo "mkfontscale no encontrado"
-          which bdftopcf || echo "bdftopcf no encontrado"
+            libtool autoconf automake xfonts-utils
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -126,7 +109,13 @@ jobs:
           rm -rf ${{ env.build_dir }}/* || true
           df -h
 
-      # --- BLOQUE: Descargar ffmpegx y comskip desde release ---
+      - name: 📥 Download toolchain artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: toolchain-${{ env.os }}-${{ matrix.device }}
+          path: ${{ env.build_dir }}/toolchain/
+
+      # --- BLOQUE: Descargar ffmpegx desde release ---
       - name: 📥 Descargar ffmpegx desde release
         run: |
           mkdir -p .github/ffmpegx
@@ -138,6 +127,7 @@ jobs:
           chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg
           chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe
 
+      # --- BLOQUE: Descargar comskip desde release ---
       - name: 📥 Descargar comskip desde release
         run: |
           mkdir -p .github/comskip
