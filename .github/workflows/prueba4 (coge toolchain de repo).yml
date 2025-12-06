@@ -19,14 +19,14 @@ jobs:
       - name: 🔌️ Checkout
         uses: actions/checkout@v4
 
-      - name: 🔨️ Install base dependencies + fix gettext deps
+      - name: 🔨️ Install base dependencies + fix gettext/libtool deps
         run: |
           sudo apt-get update && sudo apt-get install -y \
             build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
             patchutils lzop libxml-parser-perl libparse-yapp-perl \
             openjdk-11-jre-headless openjdk-17-jre-headless \
             rsync rename jq rdfind yasm nasm pkg-config \
-            libtool autoconf automake xfonts-utils m4 texinfo gettext autopoint
+            libtool autoconf automake xfonts-utils m4 texinfo gettext autopoint help2man
           which gettext || echo "gettext no encontrado"
           which autopoint || echo "autopoint no encontrado"
           which m4 || echo "m4 no encontrado"
@@ -64,6 +64,12 @@ jobs:
           mkdir -p ${{ env.build_dir }}/toolchain
           curl -L -o toolchain.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/toolchain-CoreELEC-Amlogic-no.zip
           unzip toolchain.zip -d ${{ env.build_dir }}/toolchain
+
+      # --- BLOQUE: Exportar libtool del toolchain ---
+      - name: 🛠️ Export toolchain libtool to PATH
+        run: |
+          echo "${{ env.build_dir }}/toolchain/bin" >> $GITHUB_PATH
+          echo "ACLOCAL_PATH=${{ env.build_dir }}/toolchain/share/aclocal" >> $GITHUB_ENV
 
       # --- BLOQUE: Descargar ffmpegx desde release ---
       - name: 📥 Descargar ffmpegx desde release
@@ -129,3 +135,4 @@ jobs:
           name: build-logs
           path: ${{ env.build_dir }}/.threads/logs/
           compression-level: 9
+
