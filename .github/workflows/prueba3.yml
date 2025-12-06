@@ -28,6 +28,14 @@ jobs:
             rsync rename jq rdfind yasm nasm pkg-config \
             libtool autoconf automake
 
+      - name: 🔨️ Install missing X11 font utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xfonts-utils
+          which mkfontdir || echo "mkfontdir no encontrado"
+          which mkfontscale || echo "mkfontscale no encontrado"
+          which bdftopcf || echo "bdftopcf no encontrado"
+
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
@@ -85,6 +93,14 @@ jobs:
             openjdk-11-jre-headless openjdk-17-jre-headless \
             rsync rename jq rdfind yasm nasm pkg-config \
             libtool autoconf automake
+
+      - name: 🔨️ Install missing X11 font utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xfonts-utils
+          which mkfontdir || echo "mkfontdir no encontrado"
+          which mkfontscale || echo "mkfontscale no encontrado"
+          which bdftopcf || echo "bdftopcf no encontrado"
 
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
@@ -154,4 +170,5 @@ jobs:
           name: tvheadend43-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
