@@ -16,10 +16,10 @@ jobs:
           device: Amlogic-no
 
     steps:
-      - name: 🔌️ Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🔨️ Install base dependencies + fix gettext/libtool deps
+      - name: Install base dependencies + fix gettext/libtool deps
         run: |
           sudo apt-get update && sudo apt-get install -y \
             build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
@@ -34,18 +34,18 @@ jobs:
           which automake || echo "automake no encontrado"
           which libtool || echo "libtool no encontrado"
 
-      - name: ✂️ Set OS without extension
+      - name: Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
-      - name: 📥️ Download the ${{ matrix.os }}
+      - name: Download the ${{ matrix.os }}
         run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
 
-      - name: 📌️ ${{ matrix.os }} release tags checkout
+      - name: Release tags checkout
         run: |
           cd ${{ matrix.os }}
           git checkout ${{ matrix.tags }}
 
-      - name: 🔍️ Get path
+      - name: Get path
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
@@ -54,12 +54,13 @@ jobs:
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
       # --- BLOQUE: Fallback de fuentes locales ---
-      - name: 📦 Fallback: copy local sources if missing
+      - name: Fallback: copy local sources if missing
         run: |
-          if [ -d ${{ github.workspace }}/.github/sources ]; then
-            mkdir -p ${{ env.sources_dir }}
+          set -e
+          if [ -d "${{ github.workspace }}/.github/sources" ]; then
+            mkdir -p "${{ env.sources_dir }}"
             # Copiar ficheros si no existen ya en SOURCES
-            for f in $(find ${{ github.workspace }}/.github/sources -maxdepth 2 -type f); do
+            for f in $(find "${{ github.workspace }}/.github/sources" -maxdepth 2 -type f); do
               base=$(basename "$f")
               dest="${{ env.sources_dir }}/$base"
               if [ ! -f "$dest" ]; then
@@ -68,7 +69,7 @@ jobs:
               fi
             done
             # Copiar subcarpetas si no existen ya
-            for d in $(find ${{ github.workspace }}/.github/sources -mindepth 1 -maxdepth 1 -type d); do
+            for d in $(find "${{ github.workspace }}/.github/sources" -mindepth 1 -maxdepth 1 -type d); do
               name=$(basename "$d")
               if [ ! -d "${{ env.sources_dir }}/$name" ]; then
                 echo "Usando carpeta local: $name"
@@ -77,28 +78,24 @@ jobs:
             done
           fi
 
-      - name: 🧹 Clean build dir (safe pre-build cleanup)
+      - name: Clean build dir (safe pre-build cleanup)
         run: |
           rm -rf ${{ env.build_dir }}/* || true
           df -h
 
-      # --- BLOQUE: Descargar toolchain desde release ---
-      - name: 📥 Descargar toolchain desde release
+      - name: Download toolchain from release
         run: |
           mkdir -p ${{ env.build_dir }}/toolchain
           curl -L -o toolchain.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/toolchain-CoreELEC-Amlogic-no.zip
           unzip toolchain.zip -d ${{ env.build_dir }}/toolchain
 
-      # --- BLOQUE: Exportar libtool del toolchain ---
-      - name: 🛠️ Export toolchain libtool to PATH
+      - name: Export toolchain libtool to PATH
         run: |
           echo "${{ env.build_dir }}/toolchain/bin" >> $GITHUB_PATH
           echo "ACLOCAL_PATH=${{ env.build_dir }}/toolchain/share/aclocal" >> $GITHUB_ENV
-          # Desactivar autoreconf para libtool
           echo "PKG_AUTORECONF=no" >> $GITHUB_ENV
 
-      # --- BLOQUE: Descargar ffmpegx desde release ---
-      - name: 📥 Descargar ffmpegx desde release
+      - name: Download ffmpegx from release
         run: |
           mkdir -p .github/ffmpegx
           curl -L -o ffmpegx.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/ffmpegx-CoreELEC-Amlogic-no.zip
@@ -109,8 +106,7 @@ jobs:
           chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg
           chmod +x ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe
 
-      # --- BLOQUE: Descargar comskip desde release ---
-      - name: 📥 Descargar comskip desde release
+      - name: Download comskip from release
         run: |
           mkdir -p .github/comskip
           curl -L -o comskip.zip https://github.com/roisiano/tvheadend-addon-patched-for-CoreELEC/releases/download/ffmpeg/comskip.zip
@@ -119,32 +115,31 @@ jobs:
           cp .github/comskip/comskip ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/
           chmod +x ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip
 
-      - name: 🔎 Verificar binarios disponibles
+      - name: Verify binaries available
         run: |
           ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffmpeg -version || echo "ffmpeg no ejecuta"
           ${{ env.build_dir }}/install_pkg/ffmpegx-8.0.1/usr/local/bin/ffprobe -version || echo "ffprobe no ejecuta"
           ${{ env.build_dir }}/install_pkg/comskip/usr/local/bin/comskip --version || echo "comskip no ejecuta"
 
-      - name: 😮️ Patches adding ...
+      - name: Apply patches
         run: |
           cp ${{ github.workspace }}/.github/patches/tvheadend43-newer.patch \
              ${{ github.workspace }}/${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      - name: 👷️ Build tvheadend addon
+      - name: Build tvheadend addon
         run: |
           cd ${{ github.workspace }}/${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
           scripts/create_addon tvheadend43 -j2
 
-      - name: 📤️ Upload addon
+      - name: Upload addon
         uses: actions/upload-artifact@v4
         with:
           name: tvheadend43-${{ env.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
 
-      # --- BLOQUE: Mostrar logs de fallos (100 líneas) ---
-      - name: 📜 Mostrar primeros 100 líneas de logs con FAIL
+      - name: Show first 100 lines of logs with FAIL
         if: failure()
         run: |
           echo "=== Logs de fallos (primeras 100 líneas) ==="
@@ -153,8 +148,7 @@ jobs:
             head -n 100 "$log"
           done
 
-      # --- BLOQUE: Subir todos los logs como artifact ---
-      - name: 📤 Upload build logs
+      - name: Upload build logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
