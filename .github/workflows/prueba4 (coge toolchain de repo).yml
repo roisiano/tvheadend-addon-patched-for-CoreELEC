@@ -58,6 +58,7 @@ jobs:
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
+            # Copiar ficheros si no existen ya en SOURCES
             for f in $(find ${{ github.workspace }}/.github/sources -maxdepth 2 -type f); do
               base=$(basename "$f")
               dest="${{ env.sources_dir }}/$base"
@@ -66,6 +67,7 @@ jobs:
                 cp "$f" "$dest"
               fi
             done
+            # Copiar subcarpetas si no existen ya
             for d in $(find ${{ github.workspace }}/.github/sources -mindepth 1 -maxdepth 1 -type d); do
               name=$(basename "$d")
               if [ ! -d "${{ env.sources_dir }}/$name" ]; then
@@ -92,7 +94,8 @@ jobs:
         run: |
           echo "${{ env.build_dir }}/toolchain/bin" >> $GITHUB_PATH
           echo "ACLOCAL_PATH=${{ env.build_dir }}/toolchain/share/aclocal" >> $GITHUB_ENV
-          echo "PKG_AUTORECONF=no" >> $GITHUB_ENV   # Desactivar autoreconf para libtool
+          # Desactivar autoreconf para libtool
+          echo "PKG_AUTORECONF=no" >> $GITHUB_ENV
 
       # --- BLOQUE: Descargar ffmpegx desde release ---
       - name: 📥 Descargar ffmpegx desde release
@@ -156,4 +159,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: ${{ env.build_dir }}/.threads/logs
+          path: ${{ env.build_dir }}/.threads/logs/
+          compression-level: 9
