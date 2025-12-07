@@ -53,15 +53,26 @@ jobs:
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
-      # --- BLOQUE: Copiar tus fuentes locales ---
-      - name: 📦 Copy local sources to CoreELEC
+      # --- BLOQUE: Fallback de fuentes locales ---
+      - name: 📦 Fallback: copy local sources if missing
         run: |
           if [ -d ${{ github.workspace }}/.github/sources ]; then
             mkdir -p ${{ env.sources_dir }}
-            # Copiar toda la estructura de subcarpetas
-            cp -r ${{ github.workspace }}/.github/sources/* ${{ env.sources_dir }}/
-            # Copiar también todos los ficheros al nivel raíz
-            find ${{ github.workspace }}/.github/sources -maxdepth 2 -type f -exec cp {} ${{ env.sources_dir }}/ \;
+            for f in $(find ${{ github.workspace }}/.github/sources -maxdepth 2 -type f); do
+              base=$(basename "$f")
+              dest="${{ env.sources_dir }}/$base"
+              if [ ! -f "$dest" ]; then
+                echo "Usando fuente local: $base"
+                cp "$f" "$dest"
+              fi
+            done
+            for d in $(find ${{ github.workspace }}/.github/sources -mindepth 1 -maxdepth 1 -type d); do
+              name=$(basename "$d")
+              if [ ! -d "${{ env.sources_dir }}/$name" ]; then
+                echo "Usando carpeta local: $name"
+                cp -r "$d" "${{ env.sources_dir }}/"
+              fi
+            done
           fi
 
       - name: 🧹 Clean build dir (safe pre-build cleanup)
@@ -81,6 +92,7 @@ jobs:
         run: |
           echo "${{ env.build_dir }}/toolchain/bin" >> $GITHUB_PATH
           echo "ACLOCAL_PATH=${{ env.build_dir }}/toolchain/share/aclocal" >> $GITHUB_ENV
+          echo "PKG_AUTORECONF=no" >> $GITHUB_ENV   # Desactivar autoreconf para libtool
 
       # --- BLOQUE: Descargar ffmpegx desde release ---
       - name: 📥 Descargar ffmpegx desde release
@@ -144,6 +156,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: ${{ env.build_dir }}/.threads/logs/
-          compression-level: 9
-
+          path: ${{ env.build_dir }}/.threads/logs
