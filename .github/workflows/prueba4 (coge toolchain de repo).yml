@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install base dependencies + fix gettext/libtool deps
+      - name: Install base dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y \
             build-essential git wget zip unzip xz-utils bc curl gperf xsltproc \
@@ -37,10 +37,10 @@ jobs:
       - name: Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
-      - name: Download the ${{ matrix.os }}
+      - name: Download CoreELEC
         run: git clone https://github.com/${{ env.os }}/${{ matrix.os }}
 
-      - name: Release tags checkout
+      - name: Checkout release tag
         run: |
           cd ${{ matrix.os }}
           git checkout ${{ matrix.tags }}
@@ -53,13 +53,11 @@ jobs:
           echo "build_dir=$(echo ${BUILD})" >> $GITHUB_ENV
           echo "project=$(echo ${DISTRONAME}-${OS_VERSION})" >> $GITHUB_ENV
 
-      # --- BLOQUE: Fallback de fuentes locales ---
-      - name: Fallback: copy local sources if missing
+      - name: Fallback copy local sources if missing
         run: |
           set -e
           if [ -d "${{ github.workspace }}/.github/sources" ]; then
             mkdir -p "${{ env.sources_dir }}"
-            # Copiar ficheros si no existen ya en SOURCES
             for f in $(find "${{ github.workspace }}/.github/sources" -maxdepth 2 -type f); do
               base=$(basename "$f")
               dest="${{ env.sources_dir }}/$base"
@@ -68,7 +66,6 @@ jobs:
                 cp "$f" "$dest"
               fi
             done
-            # Copiar subcarpetas si no existen ya
             for d in $(find "${{ github.workspace }}/.github/sources" -mindepth 1 -maxdepth 1 -type d); do
               name=$(basename "$d")
               if [ ! -d "${{ env.sources_dir }}/$name" ]; then
@@ -78,7 +75,7 @@ jobs:
             done
           fi
 
-      - name: Clean build dir (safe pre-build cleanup)
+      - name: Clean build dir
         run: |
           rm -rf ${{ env.build_dir }}/* || true
           df -h
