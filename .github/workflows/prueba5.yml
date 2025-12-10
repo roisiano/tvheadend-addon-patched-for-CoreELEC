@@ -1,0 +1,82 @@
+name: CoreELEC Tvheadend Addon Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: CoreELEC-aarch64
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout del repositorio que contiene workflow y fuentes locales
+      - name: 🔌 Checkout workflow repo
+        uses: actions/checkout@v4
+
+      # 2️⃣ Liberar espacio en runner gratuito
+      - name: 🧹 Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      # 3️⃣ Instalar dependencias
+      - name: 🔨 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc g++ make git wget zip unzip xz-utils bc curl gperf \
+            xsltproc xfonts-utils patchutils lzop libxml-parser-perl \
+            libparse-yapp-perl openjdk-11-jre-headless openjdk-17-jre-headless rsync rename jq rdfind
+
+      # 4️⃣ Clonar CoreELEC (shallow clone)
+      - name: 📥 Clone CoreELEC
+        run: |
+          git clone --depth 1 https://github.com/CoreELEC/CoreELEC
+          cd CoreELEC
+          git checkout origin/coreelec-22
+
+      # 5️⃣ Aplicar parche dvbcsa
+      - name: 😜 Update dvbcsa
+        run: |
+          patch -d CoreELEC -p1 < .github/patches/up-libdvbcsa.patch
+
+      # 6️⃣ Configurar rutas y variables
+      - name: 🔍 Set paths
+        run: |
+          cd CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+          echo "sources_dir=$SOURCES" >> $GITHUB_ENV
+          echo "build_dir=$BUILD" >> $GITHUB_ENV
+
+      # 7️⃣ Cache solo de ccache
+      - name: 💽 Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.build_dir }}/.ccache
+          key: coreelec-tvheadend-ccache
+
+      # 8️⃣ Complementar fuentes locales si faltan
+      - name: 📦 Add fallback sources
+        run: |
+          mkdir -p ${{ env.sources_dir }}
+          rsync -a --ignore-existing .github/sources/ ${{ env.sources_dir }}/
+
+      # 9️⃣ Aplicar parches de Tvheadend
+      - name: 😮 Apply Tvheadend patch
+        run: |
+          cp .github/patches/tvheadend43-newer.patch \
+             CoreELEC/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      # 🔟 Compilar el addon
+      - name: 👷 Build addon
+        run: |
+          cd CoreELEC
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no scripts/create_addon tvheadend43
+
+      # 1️⃣1️⃣ Subir todo el target generado
+      - name: 📤️ Upload target
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-CoreELEC-Amlogic-no
+          path: ${{ github.workspace }}/CoreELEC/target/
+          compression-level: 9
