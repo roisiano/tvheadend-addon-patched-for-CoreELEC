@@ -1,0 +1,110 @@
+name: Build ZeroTier .ipk for CoreELEC 21.3 ng/ne
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        coreelec: [ng, ne]
+    env:
+      ZT_VERSION: "1.14.0"
+      PKG_VERSION: "1"
+      ARCH: "aarch64-3.10"
+
+    steps:
+      - name: Checkout repository (packaging)
+        uses: actions/checkout@v4
+
+      - name: Checkout ZeroTier sources
+        uses: actions/checkout@v4
+        with:
+          repository: zerotier/ZeroTierOne
+          ref: v${{ env.ZT_VERSION }}
+          path: ZeroTierOne
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git pkg-config \
+              gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+              libstdc++-11-dev
+
+      - name: Prepare kernel headers (CoreELEC)
+        run: |
+          mkdir -p kernel
+          # Ajusta estas URLs si tienes headers propios; como fallback se construye sin KERNEL_INCLUDE_DIR.
+          # Puedes subir tus headers como artifact o usar un release propio.
+          echo "Using generic build without explicit kernel headers (netlink ABI stable)."
+          ls -la kernel
+
+      - name: Configure ZeroTier (aarch64)
+        run: |
+          cd ZeroTierOne
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_INSTALL_PREFIX=/opt \
+            -DZTO_ENABLE_TRACE=OFF
+
+      - name: Build ZeroTier
+        run: |
+          cd ZeroTierOne/build
+          make -j$(nproc)
+          file zerotier-one zerotier-cli
+
+      - name: Stage files for .ipk
+        run: |
+          mkdir -p stage/opt/bin
+          mkdir -p stage/opt/etc/init.d
+          mkdir -p stage/opt/etc/zerotier
+          cp ZeroTierOne/build/zerotier-one stage/opt/bin/
+          cp ZeroTierOne/build/zerotier-cli stage/opt/bin/
+          # Copiar init script desde repo
+          cp packaging/init/S99zerotier stage/opt/etc/init.d/
+          chmod +x stage/opt/etc/init.d/S99zerotier
+
+      - name: Create control files
+        run: |
+          mkdir -p stage/CONTROL
+          cat > stage/CONTROL/control <<'EOF'
+          Package: zerotier
+          Version: ${ZT_VERSION}-${PKG_VERSION}
+          Architecture: ${ARCH}
+          Maintainer: you
+          Section: net
+          Priority: optional
+          Depends: libc, libstdcpp
+          Description: ZeroTier One for CoreELEC 21.3 (Entware). Provides zerotier-one and zerotier-cli with init script.
+          EOF
+          # Expand variables in control
+          sed -i "s/\${ZT_VERSION}/${ZT_VERSION}/g" stage/CONTROL/control
+          sed -i "s/\${PKG_VERSION}/${PKG_VERSION}/g" stage/CONTROL/control
+          sed -i "s/\${ARCH}/${ARCH}/g" stage/CONTROL/control
+
+          # postinst / prerm
+          cp packaging/postinst stage/CONTROL/postinst
+          cp packaging/prerm stage/CONTROL/prerm
+          chmod +x stage/CONTROL/postinst stage/CONTROL/prerm
+
+      - name: Build .ipk
+        run: |
+          # Empaquetado manual estilo opkg-build
+          cd stage
+          tar -czf data.tar.gz opt
+          tar -czf control.tar.gz CONTROL
+          echo "2.0" > debian-binary
+          PKG="zerotier_${ZT_VERSION}-${PKG_VERSION}_${ARCH}.ipk"
+          ar r ${PKG} debian-binary control.tar.gz data.tar.gz
+          mv ${PKG} ../
+          ls -la ../
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zerotier-${{ matrix.coreelec }}
+          path: zerotier_${{ env.ZT_VERSION }}-${{ env.PKG_VERSION }}_${{ env.ARCH }}.ipk
