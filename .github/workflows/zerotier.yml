@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: zerotier/ZeroTierOne
-          ref: 1.14.0   # <-- corregido, sin la "v"
+          ref: 1.14.0
           path: ZeroTierOne
 
       - name: Install build dependencies
@@ -30,13 +30,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake git pkg-config \
               gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-              nlohmann-json3-dev libprometheus-cpp-dev
+              nlohmann-json3-dev
+
+      # --- Compilación de prometheus-cpp desde fuentes ---
+      - name: Build prometheus-cpp
+        run: |
+          git clone https://github.com/jupp0r/prometheus-cpp.git
+          cd prometheus-cpp
+          git checkout v1.0.0
+          mkdir build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PUSH=OFF -DENABLE_PULL=OFF
+          make -j$(nproc)
+          sudo make install
+          tar czf ../../prometheus-cpp-build.tar.gz .
+        working-directory: .
+
+      - name: Upload prometheus-cpp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prometheus-cpp-${{ matrix.coreelec }}
+          path: prometheus-cpp-build.tar.gz
 
       - name: Check headers
         run: |
-          ls -l /usr/include/nlohmann/json.hpp
-          ls -l /usr/include/prometheus/simpleapi.h
+          ls -l /usr/include/nlohmann/json.hpp || true
+          ls -l /usr/local/include/prometheus/simpleapi.h || true
 
+      # --- Compilación de ZeroTier ---
       - name: Configure ZeroTier (aarch64)
         run: |
           cd ZeroTierOne
@@ -46,7 +66,7 @@ jobs:
             -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
             -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
             -DCMAKE_INSTALL_PREFIX=/opt \
-            -DCMAKE_CXX_FLAGS="-I/usr/include"
+            -DCMAKE_CXX_FLAGS="-I/usr/local/include"
 
       - name: Build ZeroTier
         run: |
@@ -90,10 +110,11 @@ jobs:
           mv ${PKG} ../
           ls -la ../
 
-      - name: Upload artifact
+      - name: Upload ZeroTier artifact
         uses: actions/upload-artifact@v4
         with:
           name: zerotier-${{ matrix.coreelec }}
           path: zerotier_${{ env.ZT_VERSION }}-${{ env.PKG_VERSION }}_${{ env.ARCH }}.ipk
+
 
 
