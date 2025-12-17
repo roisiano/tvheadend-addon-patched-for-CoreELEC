@@ -30,11 +30,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake git pkg-config \
               gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-              nlohmann-json3-dev
+              nlohmann-json3-dev libprometheus-cpp-dev
 
-      - name: Check json.hpp
+      - name: Check headers
         run: |
           ls -l /usr/include/nlohmann/json.hpp
+          ls -l /usr/include/prometheus/simpleapi.h
 
       - name: Configure ZeroTier (aarch64)
         run: |
@@ -44,7 +45,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
             -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DCMAKE_INSTALL_PREFIX=/opt
+            -DCMAKE_INSTALL_PREFIX=/opt \
+            -DCMAKE_CXX_FLAGS="-I/usr/include"
 
       - name: Build ZeroTier
         run: |
@@ -93,4 +95,5 @@ jobs:
         with:
           name: zerotier-${{ matrix.coreelec }}
           path: zerotier_${{ env.ZT_VERSION }}-${{ env.PKG_VERSION }}_${{ env.ARCH }}.ipk
+
 
