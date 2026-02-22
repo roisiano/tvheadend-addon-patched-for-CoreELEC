@@ -31,17 +31,14 @@ jobs:
             device: Generic
 
     steps:
-      # 1️⃣ Checkout repo del workflow
       - name: 🔌 Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Liberar espacio (CRÍTICO)
       - name: 🧹 Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
           df -h
 
-      # 3️⃣ Dependencias
       - name: 🔨 Install dependencies
         run: |
           sudo apt-get update
@@ -51,23 +48,19 @@ jobs:
             libparse-yapp-perl openjdk-11-jre-headless openjdk-17-jre-headless \
             rsync rename jq rdfind
 
-      # 4️⃣ Normalizar nombre OS
       - name: ✂️ Set OS without extension
         run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
 
-      # 5️⃣ Clonar repo (shallow)
       - name: 📥 Download ${{ matrix.os }}
         run: |
           git clone --depth 1 https://github.com/${{ env.os }}/${{ matrix.os }}
           cd ${{ matrix.os }}
           git checkout ${{ matrix.tags }}
 
-      # 6️⃣ Parche dvbcsa
       - name: 😜 Update dvbcsa
         run: |
           patch -d ${{ matrix.os }} -p1 < .github/patches/up-libdvbcsa.patch
 
-      # 7️⃣ Rutas build
       - name: 🔍 Get path
         run: |
           cd ${{ matrix.os }}
@@ -76,36 +69,41 @@ jobs:
           echo "build_dir=$BUILD" >> $GITHUB_ENV
           echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
 
-      # 8️⃣ Cache SOLO ccache (NO sources)
       - name: 💽 Cache ccache
         uses: actions/cache@v4
         with:
           path: ${{ env.build_dir }}/.ccache
           key: ${{ env.project }}-${{ matrix.device }}-ccache
 
-      # 9️⃣ Fuentes locales (sin symlink)
       - name: 📦 Add fallback sources
         run: |
           mkdir -p ${{ env.sources_dir }}
           rsync -a --ignore-existing .github/sources/ ${{ env.sources_dir }}/
 
-      # 🔟 Parche Tvheadend
       - name: 😮 Apply Tvheadend patch
         run: |
           cp .github/patches/tvheadend43-newer.patch \
              ${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
 
-      # 1️⃣1️⃣ Compilar addon
       - name: 👷 Build addon
         run: |
           cd ${{ matrix.os }}
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
           scripts/create_addon tvheadend43
 
-      # 1️⃣2️⃣ Subir target completo
+      # 🔥 NUEVO: subir logs si falla
+      - name: 📤 Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.os }}-${{ matrix.device }}
+          path: ${{ matrix.os }}/build*/.threads/logs/
+          compression-level: 9
+
       - name: 📤 Upload target
         uses: actions/upload-artifact@v4
         with:
           name: target-${{ matrix.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
