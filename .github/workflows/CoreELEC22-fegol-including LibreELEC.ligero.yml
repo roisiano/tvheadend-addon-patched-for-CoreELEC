@@ -3,6 +3,9 @@ name: GitHub Automatic Build
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: ${{ matrix.os }}-${{ matrix.device }}
@@ -91,7 +94,6 @@ jobs:
           ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
           scripts/create_addon tvheadend43
 
-      # 🔥 NUEVO: subir logs si falla
       - name: 📤 Upload build logs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -106,4 +108,5 @@ jobs:
           name: target-${{ matrix.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
 
