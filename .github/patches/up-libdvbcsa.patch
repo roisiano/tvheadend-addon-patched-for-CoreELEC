@@ -1,7 +1,6 @@
-diff --git a/packages/addons/addon-depends/libdvbcsa/package.mk b/packages/addons/addon-depends/libdvbcsa/package.mk
 --- a/packages/addons/addon-depends/libdvbcsa/package.mk
 +++ b/packages/addons/addon-depends/libdvbcsa/package.mk
-@@ -3,8 +3,8 @@
+@@ -3,10 +3,10 @@
  # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
  
  PKG_NAME="libdvbcsa"
@@ -9,6 +8,8 @@ diff --git a/packages/addons/addon-depends/libdvbcsa/package.mk b/packages/addon
 -PKG_SHA256="0cca50576222475afd6945fc883ee19870656a73353eb0b219078671abaf3fbb"
 +PKG_VERSION="f25351d70589ec97ae6fb7590786c9aa38b999d4"
 +PKG_SHA256="807998d0cf33fea4b716f534b9658aa02b185f50e5b143620d58f520b34ce0b7"
- PKG_LICENSE="LGPL"
+ PKG_LICENSE="GPL-2.0-only"
  PKG_SITE="https://www.videolan.org/developers/libdvbcsa.html"
  PKG_URL="https://github.com/glenvt18/libdvbcsa/archive/${PKG_VERSION}.tar.gz"
+ PKG_DEPENDS_TARGET="toolchain"
+ PKG_LONGDESC="A implementation of DVB/CSA, with encryption and decryption capabilities."
