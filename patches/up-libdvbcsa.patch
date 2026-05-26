@@ -1,5 +1,4 @@
 diff --git a/packages/addons/addon-depends/libdvbcsa/package.mk b/packages/addons/addon-depends/libdvbcsa/package.mk
-index 0000000..0000000 100644
 --- a/packages/addons/addon-depends/libdvbcsa/package.mk
 +++ b/packages/addons/addon-depends/libdvbcsa/package.mk
 @@ -5,8 +5,8 @@ PKG_NAME="libdvbcsa"
