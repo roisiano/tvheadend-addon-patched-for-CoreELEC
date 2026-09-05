@@ -1,0 +1,126 @@
+name: GitHub Automatic Build
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ matrix.device }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: CoreELEC
+            tags: origin/coreelec-22
+            arch: aarch64
+            project: Amlogic-ce
+            device: Amlogic-no
+
+          - os: LibreELEC.tv
+            tags: origin/master
+            arch: aarch64
+            project: ARM
+            device: ARMv8
+
+          - os: LibreELEC.tv
+            tags: origin/master
+            arch: x86_64
+            project: Generic
+            device: Generic
+
+    steps:
+      - name: 🔌 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧹 Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      - name: 🔨 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc g++ make git wget zip unzip xz-utils bc curl gperf \
+            xsltproc xfonts-utils patchutils lzop libxml-parser-perl \
+            libparse-yapp-perl openjdk-11-jre-headless openjdk-17-jre-headless \
+            rsync rename jq rdfind
+
+      - name: ✂️ Set OS without extension
+        run: echo "os=$(echo ${{ matrix.os }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+
+      - name: 📥 Download ${{ matrix.os }}
+        run: |
+          git clone --depth 1 https://github.com/${{ env.os }}/${{ matrix.os }}
+          cd ${{ matrix.os }}
+          git checkout ${{ matrix.tags }}
+
+      - name: 🩹 Fix GNU mirrors
+        run: |
+          echo "Patching broken ftpmirror.gnu.org URLs..."
+          find ${{ matrix.os }} -type f -name "*.mk" -exec \
+            sed -i 's|ftpmirror.gnu.org|mirrors.dotsrc.org/gnu|g' {} +
+
+      - name: 😜 Update dvbcsa
+        run: |
+          echo "===== REAL FILE ====="
+          sed -n '1,20p' ${{ matrix.os }}/packages/addons/addon-depends/libdvbcsa/package.mk
+          echo
+          echo "===== PATCH FILE ====="
+          sed -n '1,20p' .github/patches/up-libdvbcsa.patch | cat -A
+          echo
+          echo "===== DRY RUN ====="
+          patch --dry-run -d ${{ matrix.os }} -p1 < .github/patches/up-libdvbcsa.patch
+          echo
+          echo "===== APPLY PATCH ====="
+          patch -d ${{ matrix.os }} -p1 < .github/patches/up-libdvbcsa.patch
+
+      - name: 🔍 Get path
+        run: |
+          cd ${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} . config/options
+          echo "sources_dir=$SOURCES" >> $GITHUB_ENV
+          echo "build_dir=$BUILD" >> $GITHUB_ENV
+          echo "project=${DISTRONAME}-${OS_VERSION}" >> $GITHUB_ENV
+
+      - name: 💽 Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.build_dir }}/.ccache
+          key: ${{ env.project }}-${{ matrix.device }}-ccache
+
+      - name: 📦 Add fallback sources
+        run: |
+          mkdir -p ${{ env.sources_dir }}
+          rsync -a --ignore-existing .github/sources/ ${{ env.sources_dir }}/
+
+      - name: 😮 Apply Tvheadend patch
+        run: |
+          cp .github/patches/tvheadend43-newer.patch \
+             ${{ matrix.os }}/packages/addons/service/tvheadend43/patches/tvheadend43-100-LS.patch
+
+      - name: 👷 Build addon
+        run: |
+          cd ${{ matrix.os }}
+          ARCH=${{ matrix.arch }} PROJECT=${{ matrix.project }} DEVICE=${{ matrix.device }} \
+          scripts/create_addon tvheadend43
+
+      - name: 📤 Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.os }}-${{ matrix.device }}
+          path: ${{ matrix.os }}/build*/.threads/logs/
+          compression-level: 9
+
+      - name: 📤 Upload target
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-${{ matrix.os }}-${{ matrix.device }}
+          path: ${{ github.workspace }}/${{ matrix.os }}/target/
+          compression-level: 9
