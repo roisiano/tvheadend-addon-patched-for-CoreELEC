@@ -60,11 +60,25 @@ jobs:
           cd ${{ matrix.os }}
           git checkout ${{ matrix.tags }}
 
-      - name: 🩹 Fix GNU mirrors
+      - name: 🩹 Fix GNU mirrors (ftp.gnu.org with single /gnu/)
         run: |
-          echo "Patching broken ftpmirror.gnu.org URLs..."
-          find ${{ matrix.os }} -type f -name "*.mk" -exec \
-            sed -i 's|ftpmirror.gnu.org|mirrors.dotsrc.org/gnu|g' {} +
+          echo "Fixing ftpmirror.gnu.org → ftp.gnu.org/gnu/"
+          find ${{ matrix.os }} -type f -name "*.mk" | while read f; do
+            URL=$(grep -Eo 'https://ftpmirror\.gnu\.org[^"]+' "$f" | head -n1)
+            [ -z "$URL" ] && continue
+
+            PATH_ONLY=$(echo "$URL" | sed 's|https://ftpmirror.gnu.org||')
+
+            if echo "$PATH_ONLY" | grep -q '^/gnu/'; then
+              CLEAN_PATH="$PATH_ONLY"
+            else
+              CLEAN_PATH="/gnu$PATH_ONLY"
+            fi
+
+            FINAL_URL="https://ftp.gnu.org$CLEAN_PATH"
+
+            sed -i "s|$URL|$FINAL_URL|g" "$f"
+          done
 
       - name: 😜 Update dvbcsa
         run: |
@@ -124,3 +138,4 @@ jobs:
           name: target-${{ matrix.os }}-${{ matrix.device }}
           path: ${{ github.workspace }}/${{ matrix.os }}/target/
           compression-level: 9
+
