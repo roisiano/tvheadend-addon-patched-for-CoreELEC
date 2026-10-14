@@ -1,4 +1,4 @@
-name: GitHub Automatic Build
+name: nuevo.yml
 
 on:
   workflow_dispatch:
