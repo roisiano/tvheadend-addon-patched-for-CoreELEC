@@ -1,4 +1,4 @@
-name: GitHub Automatic Build
+name: cambioftp.yml
 
 on:
   workflow_dispatch:
