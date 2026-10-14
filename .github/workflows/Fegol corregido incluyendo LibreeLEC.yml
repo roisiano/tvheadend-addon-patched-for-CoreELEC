@@ -1,4 +1,4 @@
-name: GitHub Automatic Build
+name: Fegol corregido incluyendo LibreeLEC.yml
 on:
   workflow_dispatch:
 
