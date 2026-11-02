@@ -1,4 +1,4 @@
-name: debug-sources
+name: debug-dtv-sources
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Clone CoreELEC
@@ -17,55 +17,88 @@ jobs:
           cd CoreELEC
           git checkout coreelec-22
 
-      - name: Get paths
+      - name: Read CoreELEC paths
         run: |
           cd CoreELEC
 
           ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
 
+          echo "sources_dir=$SOURCES" >> $GITHUB_ENV
+          echo "build_dir=$BUILD" >> $GITHUB_ENV
+
+          echo "===== VARIABLES ====="
           echo "SOURCES=$SOURCES"
           echo "BUILD=$BUILD"
 
-          echo "sources_dir=$SOURCES" >> $GITHUB_ENV
-
-      - name: Show repository sources
-        run: |
-          echo "===== .github/sources ====="
-          find .github/sources -type f | sort
-
-      - name: Copy fallback sources
+      - name: Inject fallback sources
         run: |
           mkdir -p "${{ env.sources_dir }}"
-
           rsync -av .github/sources/ "${{ env.sources_dir }}/"
 
-      - name: Show destination
+      - name: Show dtv files found
         run: |
-          echo "===== SOURCES DIR ====="
-          echo "${{ env.sources_dir }}"
-          echo
-
-          echo "===== EVERYTHING INSIDE ====="
-          find "${{ env.sources_dir }}" | sort
-
-      - name: Locate dtv-scan-tables
-        run: |
-          echo "===== DTV FILES ====="
+          echo "===== DTV FILES FOUND ====="
 
           find "${{ env.sources_dir }}" \
-            -iname "*dtv*" \
-            -o -iname "*scan*" \
+            \( -iname "*dtv*" -o -iname "*scan*" \) \
             | sort
 
-      - name: Check exact file
+      - name: Examine exact files
         run: |
-          FILE=$(find "${{ env.sources_dir }}" -name "dtv-scan-tables-2026-04-11-be35975ac877.tar.bz2" | head -n1)
+          FILE="${{ env.sources_dir }}/dtv-scan-tables-2026-04-11-be35975ac877.tar.bz2"
 
-          echo "FOUND: $FILE"
+          echo
+          echo "===== FILE EXISTS? ====="
 
-          if [ -n "$FILE" ]; then
-            ls -lh "$FILE"
-            sha256sum "$FILE"
-          else
-            echo "FILE NOT FOUND"
+          if [ ! -f "$FILE" ]; then
+            echo "NOT FOUND"
+            exit 1
           fi
+
+          ls -lh "$FILE"
+
+          echo
+          echo "===== FILE TYPE ====="
+          file "$FILE"
+
+          echo
+          echo "===== REAL SHA256 ====="
+          sha256sum "$FILE"
+
+          echo
+          echo "===== SHA256 FILE CONTENT ====="
+          cat "${FILE}.sha256"
+
+          echo
+          echo "===== URL FILE CONTENT ====="
+          cat "${FILE}.url"
+
+      - name: Compare checksums
+        run: |
+          FILE="${{ env.sources_dir }}/dtv-scan-tables-2026-04-11-be35975ac877.tar.bz2"
+
+          REAL_SHA=$(sha256sum "$FILE" | awk '{print $1}')
+          EXPECTED_SHA=$(cat "${FILE}.sha256" | awk '{print $1}')
+
+          echo "REAL     : $REAL_SHA"
+          echo "EXPECTED : $EXPECTED_SHA"
+
+          if [ "$REAL_SHA" = "$EXPECTED_SHA" ]; then
+            echo "CHECKSUM MATCH"
+          else
+            echo "CHECKSUM MISMATCH"
+            exit 1
+          fi
+
+      - name: Show first bytes
+        run: |
+          FILE="${{ env.sources_dir }}/dtv-scan-tables-2026-04-11-be35975ac877.tar.bz2"
+
+          echo "===== FIRST 64 BYTES ====="
+          xxd -l 64 "$FILE"
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: dtv-debug
+          path: ${{ env.sources_dir }}
