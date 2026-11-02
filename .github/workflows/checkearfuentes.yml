@@ -1,0 +1,71 @@
+name: debug-sources
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone CoreELEC
+        run: |
+          git clone --depth 1 https://github.com/CoreELEC/CoreELEC.git
+          cd CoreELEC
+          git checkout coreelec-22
+
+      - name: Get paths
+        run: |
+          cd CoreELEC
+
+          ARCH=aarch64 PROJECT=Amlogic-ce DEVICE=Amlogic-no . config/options
+
+          echo "SOURCES=$SOURCES"
+          echo "BUILD=$BUILD"
+
+          echo "sources_dir=$SOURCES" >> $GITHUB_ENV
+
+      - name: Show repository sources
+        run: |
+          echo "===== .github/sources ====="
+          find .github/sources -type f | sort
+
+      - name: Copy fallback sources
+        run: |
+          mkdir -p "${{ env.sources_dir }}"
+
+          rsync -av .github/sources/ "${{ env.sources_dir }}/"
+
+      - name: Show destination
+        run: |
+          echo "===== SOURCES DIR ====="
+          echo "${{ env.sources_dir }}"
+          echo
+
+          echo "===== EVERYTHING INSIDE ====="
+          find "${{ env.sources_dir }}" | sort
+
+      - name: Locate dtv-scan-tables
+        run: |
+          echo "===== DTV FILES ====="
+
+          find "${{ env.sources_dir }}" \
+            -iname "*dtv*" \
+            -o -iname "*scan*" \
+            | sort
+
+      - name: Check exact file
+        run: |
+          FILE=$(find "${{ env.sources_dir }}" -name "dtv-scan-tables-2026-04-11-be35975ac877.tar.bz2" | head -n1)
+
+          echo "FOUND: $FILE"
+
+          if [ -n "$FILE" ]; then
+            ls -lh "$FILE"
+            sha256sum "$FILE"
+          else
+            echo "FILE NOT FOUND"
+          fi
