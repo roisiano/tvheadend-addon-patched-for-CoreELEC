@@ -1,4 +1,4 @@
-name: cambioftp.yml
+name: cambioftp.nuevo.yml
 
 on:
   workflow_dispatch:
